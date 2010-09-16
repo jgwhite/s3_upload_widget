@@ -76,13 +76,14 @@ S3UploadWidget.prototype.form = function() {
     this._form.method = "post";
     this._form.enctype = "multipart/form-data";
     
-    var fieldset = document.createElement("fieldset");
+    var fieldset;
     
+    fieldset = document.createElement("fieldset");
     this._form.appendChild(fieldset);
-    
     fieldset.appendChild(this.file_input());
-    fieldset.appendChild(this.terms_agreed_input());
-    fieldset.appendChild(this.terms_agreed_label());
+    
+    fieldset = document.createElement("fieldset");
+    this._form.appendChild(fieldset);
     fieldset.appendChild(this.submit_button());
   }
   return this._form;
@@ -95,23 +96,6 @@ S3UploadWidget.prototype.file_input = function() {
     this._file_input.id = this.id() + "_file_input";
   }
   return this._file_input;
-}
-S3UploadWidget.prototype.terms_agreed_input = function() {
-  if (!this._terms_agreed_input) {
-    this._terms_agreed_input = document.createElement("input");
-    this._terms_agreed_input.type = "checkbox";
-    this._terms_agreed_input.name = "terms_agreed";
-    this._terms_agreed_input.id = this.id() + "_terms_agreed_input";
-  }
-  return this._terms_agreed_input;
-}
-S3UploadWidget.prototype.terms_agreed_label = function() {
-  if (!this._terms_agreed_label) {
-    this._terms_agreed_label = document.createElement("label");
-    this._terms_agreed_label.setAttribute("for", this.id() + "_terms_agreed_input");
-    this._terms_agreed_label.id = this.id() + "_terms_agreed_label";
-  }
-  return this._terms_agreed_label;
 }
 S3UploadWidget.prototype.submit_button = function() {
   if (!this._submit_button) {

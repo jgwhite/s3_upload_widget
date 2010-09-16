@@ -122,21 +122,6 @@ describe("S3UploadWidget", function() {
         expect(file_input.name).toEqual("file");
       });
       
-      it("should contain a checkbox input with name terms_agreed", function() {
-        var terms_input = $("input[name='terms_agreed']", form)[0];
-        expect(terms_input).toBeDefined();
-        expect(terms_input.nodeName).toEqual("INPUT");
-        expect(terms_input.name).toEqual("terms_agreed");
-        expect(terms_input.checked).toBeFalsy();
-        expect(terms_input.id).toEqual(widget.id() + "_terms_agreed_input");
-      });
-      
-      it("should contain a label for the checkbox", function() {
-        var terms_agreed_label = $("#" + widget.id() + "_terms_agreed_label", form)[0];
-        expect(terms_agreed_label).toBeDefined();
-        expect(terms_agreed_label.getAttribute("for")).toEqual(widget.id() + "_terms_agreed_input");
-      });
-      
       it("should contain a submit button", function() {
         var submit_button = $("input[type='submit']", form)[0];
         expect(submit_button).toBeDefined();
