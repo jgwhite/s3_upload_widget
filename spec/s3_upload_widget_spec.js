@@ -205,17 +205,8 @@ describe("S3UploadWidget", function() {
   
   // describe("#add_field", function() {
   //   
-  //   it("should a new input to the element", function() {
-  //     var widget = S3UploadWidget.create(widget_options({ "target": "my_target" }));
-  //     var new_field = widget.add_field({
-  //       "type": "checkbox",
-  //       "name": "terms_agreed",
-  //       "value": "1",
-  //       "label": "I agree to the Terms &amp; Conditions",
-  //       "valid_if": { "checked": true }
-  //     });
+  //   it("should add a new field to the element", function() {
   //     
-  //     expect(new_field.constructor).toEqual()
   //   });
   //   
   // });
@@ -232,11 +223,6 @@ describe("S3UploadWidget", function() {
       delete field;
     });
     
-    // "type": "checkbox",
-    // "name": "terms_agreed",
-    // "value": "1",
-    // "label": "I agree to the Terms &amp; Conditions",
-    // "valid_if": { "checked": true }
     
     describe(".generate_id", function() {
       
@@ -370,6 +356,40 @@ describe("S3UploadWidget", function() {
         field.set_label("");
         label = $("label", field.element())[0];
         expect(label).not.toBeDefined();
+      });
+      
+    });
+    
+    describe("#value", function() {
+      
+      it("should return the value of the input", function() {
+        field.input().value = "Hello";
+        expect(field.value()).toEqual("Hello");
+        field.set_type("textarea");
+        expect(field.value()).toEqual("Hello");
+        field.input().value = "Good bye";
+        expect(field.value()).toEqual("Good bye");
+        field.set_type("text");
+        expect(field.value()).toEqual("Good bye");
+      });
+      
+    });
+    
+    describe("#initialize", function() {
+      
+      it("should mass asign type, name, value, label", function() {
+        field.initialize({
+          "type": "checkbox",
+          "name": "terms_agreed",
+          "value": "1",
+          "label": "I agree to the Terms &amp; Conditions"
+          // "valid_if": { "checked": true }
+        });
+        expect(field.input().type).toEqual("checkbox");
+        expect(field.input().name).toEqual("terms_agreed");
+        expect(field.input().value).toEqual("1");
+        expect(field.input().checked).toBeFalsy();
+        expect(field.value()).toEqual("1");
       });
       
     });

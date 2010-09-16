@@ -1,17 +1,24 @@
+// ==========================================================================
+// Project:   S3UploadWidget
+// Website:   http://github.com/jgwhite/s3_upload_widget
+// Authors:   Jamie White <jamie@jgwhite.co.uk>
+// License:   Licensed under MIT license
+// Copyright: © 2010 Jamie White
+// ==========================================================================
+
 S3UploadWidget = function() {};
-
-S3UploadWidget.id = 0;
 S3UploadWidget.instances = [];
-
+S3UploadWidget.DEFAULTS = {};
+S3UploadWidget.REQUIRED_OPTIONS = [ "aws_access_key_id", "bucket", "policy", "signature" ];
+S3UploadWidget.generate_id = function() {
+  if (S3UploadWidget.__id === undefined) S3UploadWidget.__id = 0;
+  return S3UploadWidget.__id++;
+}
 S3UploadWidget.create = function(options) {
   var instance = new S3UploadWidget();
   instance.initialize(options);
   return instance;
 }
-
-S3UploadWidget.DEFAULTS = {};
-S3UploadWidget.REQUIRED_OPTIONS = [ "aws_access_key_id", "bucket", "policy", "signature" ];
-
 S3UploadWidget.prototype.initialize = function(options) {
   this._options = {};
   
@@ -44,20 +51,12 @@ S3UploadWidget.prototype.initialize = function(options) {
   
   return this;
 }
-
 S3UploadWidget.prototype.id = function() {
-  if (!this._id) {
-    this._id = "s3_upload_widget_" + S3UploadWidget.id;
-    S3UploadWidget.id++;
-  }
-  
-  return this._id;
+  return this._id = this._id || ("s3_upload_widget_" + S3UploadWidget.generate_id());
 }
-
 S3UploadWidget.prototype.options = function() {
   return this._options;
 }
-
 S3UploadWidget.prototype.element = function() {
   if (!this._element) {
     this._element = document.createElement("div");
@@ -107,7 +106,6 @@ S3UploadWidget.prototype.submit_button = function() {
   }
   return this._submit_button;
 }
-
 S3UploadWidget.prototype.insert = function(target) {
   if (typeof(target) == "string") target = document.getElementById(target);
   
@@ -115,14 +113,12 @@ S3UploadWidget.prototype.insert = function(target) {
   
   target.appendChild(this.element());
 }
-
 S3UploadWidget.prototype.remove = function() {
   this.unregister();
   this.remove_elements();
   this.dealloc();
   delete this;
 }
-
 S3UploadWidget.prototype.remove_elements = function() {
   if (this._element && this._element.parentNode)
     this._element.parentNode.removeChild(this._element);
@@ -135,18 +131,12 @@ S3UploadWidget.prototype.dealloc = function() {
   for (var prop in this) if (prop.indexOf("_") === 0) delete this[prop];
 }
 
-
 S3UploadWidget.Field = function() {};
-
-S3UploadWidget.Field.DEFAULTS = {
-  "type": "text"
-};
-
+S3UploadWidget.Field.DEFAULTS = { "type": "text" };
 S3UploadWidget.Field.generate_id = function() {
-  if (S3UploadWidget.__id === undefined) S3UploadWidget.__id = 0;
-  return S3UploadWidget.__id++;
+  if (S3UploadWidget.Field.__id === undefined) S3UploadWidget.Field.__id = 0;
+  return S3UploadWidget.Field.__id++;
 }
-
 S3UploadWidget.Field.prototype.id = function() {
   return this._id = this._id || ("s3_upload_widget_field_" + S3UploadWidget.Field.generate_id());
 }
@@ -157,7 +147,6 @@ S3UploadWidget.Field.prototype.element = function() {
   }
   return this._element
 }
-
 S3UploadWidget.Field.prototype.make_input = function(type) {
   if (this._input) {
     var name = this._input.name;
@@ -183,27 +172,22 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
   this._input.name = name;
   this._input.value = value;
 }
-
 S3UploadWidget.Field.prototype.input = function() {
   if (!this._input) this.make_input();
   return this._input;
 }
-
 S3UploadWidget.Field.prototype.label = function() {
   return this._label;
 }
-
 S3UploadWidget.Field.prototype.set_type = function(new_type) {
   this.make_input(new_type);
 }
-
 S3UploadWidget.Field.prototype.set_name = function(new_name) {
   this.input().name = new_name;
 }
 S3UploadWidget.Field.prototype.set_value = function(new_value) {
   this.input().value = new_value;
 }
-
 S3UploadWidget.Field.prototype.set_label = function(new_label) {
   if (new_label != undefined && new_label.length > 0) {
     if (!this._label) {
@@ -214,5 +198,21 @@ S3UploadWidget.Field.prototype.set_label = function(new_label) {
   } else {
     if (this._label && this._label.parentNode) this._label.parentNode.removeChild(this._label);
     delete this.label;
+  }
+}
+S3UploadWidget.Field.prototype.value = function() {
+  return this.input().value;
+}
+S3UploadWidget.Field.prototype.initialize = function(new_options) {
+  var options = {};
+  for (var key in S3UploadWidget.Field.DEFAULTS)
+    options[key] = S3UploadWidget.Field.DEFAULTS[key];
+  for (var key in new_options)
+    options[key] = new_options[key];
+  
+  for (var key in options) {
+    var setter = this["set_" + key];
+    if (setter === undefined) continue; // TODO: throw error for unknown setter
+    setter.apply(this, [options[key]]);
   }
 }
