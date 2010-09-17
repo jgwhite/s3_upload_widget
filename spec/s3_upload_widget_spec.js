@@ -51,7 +51,7 @@ describe("S3UploadWidget", function() {
       expect(my_target.childNodes[0]).toEqual(widget.element());
     });
     
-    describe("when processing special options", function() {
+    describe("processing special options", function() {
       var widget;
       
       beforeEach(function() {
@@ -171,40 +171,7 @@ describe("S3UploadWidget", function() {
     it("should return a div with class S3UploadWidget", function() {
       expect(widget.element()).toBeDefined();
       expect(widget.element().nodeName).toEqual("DIV");
-      expect(widget.element().className).toEqual("S3UploadWidget");
-    });
-    
-    describe("form", function() {
-      var form;
-      
-      beforeEach(function() {
-        form = $("form", widget.element())[0];
-      });
-      
-      it("should have method post, action pointing to bucket and correct enctype", function() {
-        expect(form).toBeDefined();
-        expect(form.nodeName).toEqual("FORM");
-        expect(form.action).toEqual("http://" + widget.options()["bucket"] + ".s3.amazonaws.com/");
-        expect(form.method).toEqual("post");
-        expect(form.enctype).toEqual("multipart/form-data");
-      });
-      
-      it("should contain a file input with name file", function() {
-        var file_input = $("input[name='file']", form)[0];
-        expect(file_input).toBeDefined();
-        expect(file_input.nodeName).toEqual("INPUT");
-        expect(file_input.type).toEqual("file");
-        expect(file_input.name).toEqual("file");
-      });
-      
-      it("should contain a submit button", function() {
-        var submit_button = $("input[type='submit']", form)[0];
-        expect(submit_button).toBeDefined();
-        expect(submit_button.type).toEqual("submit");
-        expect(submit_button.value).toEqual("Upload");
-        expect(submit_button.disabled).toBeTruthy();
-      });
-      
+      expect(widget.element().className).toEqual("s3_upload_widget");
     });
     
   });
@@ -256,8 +223,8 @@ describe("S3UploadWidget", function() {
       expect(field.constructor).toEqual(S3UploadWidget.Field);
     });
     
-    it("should append a field to the element", function() {
-      var field_element = $("fieldset.s3_upload_widget_fieldset", widget.element())[0];
+    it("should append a field to the form", function() {
+      var field_element = $("#" + field.id(), widget.form())[0];
       expect(field_element).toBeDefined();
       expect(field_element.nodeName).toEqual("FIELDSET");
       expect(field_element).toEqual(field.element());
@@ -401,10 +368,11 @@ describe("S3UploadWidget", function() {
     
     describe("#element", function() {
       
-      it("should return a fieldset", function() {
+      it("should return a fieldset with class and id", function() {
         expect(field.element()).toBeDefined();
         expect(field.element().nodeName).toEqual("FIELDSET");
         expect(field.element().className).toEqual("s3_upload_widget_fieldset");
+        expect(field.element().id).toEqual(field.id());
       });
       
       it("should contain input", function() {
@@ -576,6 +544,106 @@ describe("S3UploadWidget", function() {
         expect(field.value()).toEqual("1");
       });
             
+    });
+    
+  });
+  
+  describe("Structure", function() {
+    var options;
+    var widget;
+    var fields;
+    var hidden_inputs;
+    
+    beforeEach(function() {
+      options = widget_options({
+        "target": "my_target",
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": "terms_agreed",
+            "value": "1",
+            "label": "I agree to the Terms &amp; Conditions",
+            "checked": false,
+            "valid_if": { "checked": true }
+          }
+        ]
+      });
+      widget = S3UploadWidget.create(options);
+      fields = $("fieldset", widget.form());
+    });
+    afterEach(function() {
+      widget.remove();
+      delete widget;
+      delete fields;
+    });
+    
+    it("should have a root div with class and unique id", function() {
+      expect(widget.element().nodeName).toEqual("DIV");
+      expect(widget.element().className).toEqual("s3_upload_widget");
+      expect(widget.element().id).toEqual(widget.id());
+    });
+    
+    it("should contain a form with all the right attributes", function() {
+      var form = widget.element().childNodes[0];
+      expect(form).toBeDefined();
+      expect(form.nodeName).toEqual("FORM");
+      expect(form.action).toEqual("http://" + options["bucket"] + ".s3.amazonaws.com/");
+      expect(form.method).toEqual("post");
+      expect(form.enctype).toEqual("multipart/form-data");
+    });
+    
+    it("should contain a hidden input for AWSAccessKeyId", function() {
+      var input = $("input[name='AWSAccessKeyId']", widget.form())[0];
+      expect(input).toBeDefined();
+      expect(input.value).toEqual(options["aws_access_key_id"]);
+    });
+    
+    it("should contain a hidden input for policy", function() {
+      var input = $("input[name='policy']", widget.form())[0];
+      expect(input).toBeDefined();
+      expect(input.value).toEqual(options["policy"]);
+    });
+    
+    it("should contain a hidden input for policy", function() {
+      var input = $("input[name='signature']", widget.form())[0];
+      expect(input).toBeDefined();
+      expect(input.value).toEqual(options["signature"]);
+    });
+    
+    it("should, first, contain a field for my file", function() {
+      var file_fieldset = fields[0];
+      var file_input = $(file_fieldset).children("input")[0];
+      expect(file_fieldset).toBeDefined();
+      expect(file_fieldset.nodeName).toEqual("FIELDSET");
+      expect(file_fieldset).toEqual(widget.fields()[0].element());
+      expect(file_input).toBeDefined();
+      expect(file_input.type).toEqual("file");
+      expect(file_input.name).toEqual("file");
+    });
+    
+    it("should, second, contain a labelled checkbox so I can agree to the terms", function() {
+      var terms_fieldset = fields[1];
+      var terms_input = $(terms_fieldset).children("input")[0];
+      var terms_label = $(terms_fieldset).children("label")[0];
+      expect(terms_fieldset).toBeDefined();
+      expect(terms_fieldset.nodeName).toEqual("FIELDSET");
+      expect(terms_fieldset).toEqual(widget.fields()[1].element());
+      expect(terms_input).toBeDefined();
+      expect(terms_input.type).toEqual("checkbox");
+      expect(terms_input.name).toEqual("terms_agreed");
+      expect(terms_label).toBeDefined();
+      expect(terms_label.getAttribute("for")).toEqual(terms_input.id);
+      expect(terms_label.innerHTML).toEqual(options["fields"][0]["label"]);
+    });
+    
+    it("should, third, contain a submit button", function() {
+      var submit_fieldset = fields[2];
+      var submit_button = $(submit_fieldset).children("input[type='submit']")[0];
+      expect(submit_fieldset).toBeDefined();
+      expect(submit_fieldset.nodeName).toEqual("FIELDSET");
+      expect(submit_button).toBeDefined();
+      expect(submit_button.nodeName).toEqual("INPUT");
+      expect(submit_button.value).toEqual("Upload");
     });
     
   });

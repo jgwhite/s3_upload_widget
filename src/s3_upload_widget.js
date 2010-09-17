@@ -31,16 +31,15 @@ S3UploadWidget.create = function(options) {
   return instance;
 }
 S3UploadWidget.prototype.initialize = function(options) {
+  //--- copy in options
   this._options = {};
-  
   for (var key in S3UploadWidget.DEFAULTS)
     this._options[key] = S3UploadWidget.DEFAULTS[key];
-  
   for (var key in options)
     this._options[key] = options[key];
   
+  //--- validate we have all required options
   var missing_options = [];
-  
   for (var i = 0; i < S3UploadWidget.REQUIRED_OPTIONS.length; i++) {
     var required_key = S3UploadWidget.REQUIRED_OPTIONS[i];
     if (this._options[required_key] === undefined
@@ -49,21 +48,42 @@ S3UploadWidget.prototype.initialize = function(options) {
       missing_options.push(required_key);
     }
   }
-  
-  if (missing_options.length > 0) {
+  if (missing_options.length > 0)
     throw("The following options are required: " + missing_options.join(", "));
-  }
   
+  //--- register the instance
   S3UploadWidget.instances.push(this);
   
-  this.set_hidden_value("AWSAccessKeyId", this.options()["aws_access_key_id"]);
-  this.set_hidden_value("policy", this.options()["policy"]);
-  this.set_hidden_value("signature", this.options()["signature"]);
+  //--- add the hidden inputs
+  this.set_hidden_values({
+    "AWSAccessKeyId": this.options()["aws_access_key_id"],
+    "policy": this.options()["policy"],
+    "signature": this.options()["signature"]
+  });
   
-  if (this.options()["target"]) {
-    this.insert(this.options()["target"]);
+  //--- add the file field (you don't get a choice about that)
+  this._file_field = this.add_field({
+    "type": "file",
+    "name": "file"
+  });
+  
+  //--- add extra fields
+  if (this.options()["fields"]) {
+    for (var i = 0; i < this.options()["fields"].length; i++)
+      this.add_field(this.options()["fields"][i]);
   }
   
+  //--- add the submit button
+  this._submit_button = this.add_field({
+    "type": "submit",
+    "value": "Upload",
+    "disabled": true
+  });
+  
+  //--- if a target is specified, append the element
+  if (this.options()["target"]) this.insert(this.options()["target"]);
+  
+  //--- return the instance
   return this;
 }
 S3UploadWidget.prototype.id = function() {
@@ -75,21 +95,9 @@ S3UploadWidget.prototype.options = function() {
 S3UploadWidget.prototype.element = function() {
   if (!this._element) {
     this._element = document.createElement("div");
-    this._element.className = "S3UploadWidget";
+    this._element.className = "s3_upload_widget";
     this._element.id = this.id();
-    
     this._element.appendChild(this.form());
-    
-    this.add_field({
-      "type": "file",
-      "name": "file"
-    });
-    
-    this._submit_button = this.add_field({
-      "type": "submit",
-      "value": "Upload",
-      "disabled": true
-    });
   }
   return this._element;
 }
@@ -102,26 +110,6 @@ S3UploadWidget.prototype.form = function() {
     this._form.enctype = "multipart/form-data";
   }
   return this._form;
-}
-S3UploadWidget.prototype.file_input = function() {
-  if (!this._file_input) {
-    this._file_input = document.createElement("input");
-    this._file_input.setAttribute("type", "file");
-    this._file_input.name = "file";
-    this._file_input.id = this.id() + "_file_input";
-  }
-  return this._file_input;
-}
-S3UploadWidget.prototype.submit_button = function() {
-  if (!this._submit_button) {
-    this._submit_button = document.createElement("input");
-    this._submit_button.type = "submit";
-    this._submit_button.value = "Upload";
-    this._submit_button.disabled = "disabled";
-    this._submit_button.id = this.id() + "_submit_button";
-    this._submit_button.className = "s3_upload_widget_submit_button";
-  }
-  return this._submit_button;
 }
 S3UploadWidget.prototype.insert = function(target) {
   if (typeof(target) == "string") target = document.getElementById(target);
@@ -191,6 +179,7 @@ S3UploadWidget.Field.prototype.element = function() {
   if (!this._element) {
     this._element = document.createElement("fieldset");
     this._element.className = "s3_upload_widget_fieldset";
+    this._element.id = this.id();
     this._element.appendChild(this.input());
   }
   return this._element
