@@ -6,6 +6,17 @@
 // Copyright: © 2010 Jamie White
 // ==========================================================================
 
+Array.prototype.remove = function(obj) {
+  for (var i = 0; i < this.length; i++)
+    if (this[i] === obj) { this.splice(i, 1); return obj; }
+  return null;
+}
+Array.prototype.indexOf = function(obj) {
+  for (var i = 0; i < this.length; i++)
+    if (this[i] === obj) { return i; }
+  return -1;
+}
+
 S3UploadWidget = function() {};
 S3UploadWidget.instances = [];
 S3UploadWidget.DEFAULTS = {};
@@ -30,7 +41,7 @@ S3UploadWidget.prototype.initialize = function(options) {
   
   var missing_options = [];
   
-  for (var i in S3UploadWidget.REQUIRED_OPTIONS) {
+  for (var i = 0; i < S3UploadWidget.REQUIRED_OPTIONS.length; i++) {
     var required_key = S3UploadWidget.REQUIRED_OPTIONS[i];
     if (this._options[required_key] === undefined
      || this._options[required_key] === null
@@ -90,7 +101,7 @@ S3UploadWidget.prototype.form = function() {
 S3UploadWidget.prototype.file_input = function() {
   if (!this._file_input) {
     this._file_input = document.createElement("input");
-    this._file_input.type = "file";
+    this._file_input.setAttribute("type", "file");
     this._file_input.name = "file";
     this._file_input.id = this.id() + "_file_input";
   }
@@ -117,15 +128,13 @@ S3UploadWidget.prototype.remove = function() {
   this.unregister();
   this.remove_elements();
   this.dealloc();
-  delete this;
 }
 S3UploadWidget.prototype.remove_elements = function() {
   if (this._element && this._element.parentNode)
     this._element.parentNode.removeChild(this._element);
 }
 S3UploadWidget.prototype.unregister = function () {
-  var indexOf_this = S3UploadWidget.instances.indexOf(this);
-  if (indexOf_this !== -1) S3UploadWidget.instances.splice(indexOf_this, 1);
+  var indexOf_this = S3UploadWidget.instances.remove(this);
 }
 S3UploadWidget.prototype.dealloc = function() {
   for (var prop in this) if (prop.indexOf("_") === 0) delete this[prop];
@@ -164,10 +173,10 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
     break;
   default:
     this._input = document.createElement("input");
+    this._input.setAttribute("type", type);
     break;
   }
   
-  this._input.type = type;
   this._input.id = this.id() + "_input";
   this._input.name = name;
   this._input.value = value;
