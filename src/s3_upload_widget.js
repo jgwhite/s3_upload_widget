@@ -1,7 +1,7 @@
 // ==========================================================================
 // Project:   S3UploadWidget
 // Website:   http://github.com/jgwhite/s3_upload_widget
-// Authors:   Jamie White <jamie@jgwhite.co.uk>
+// Authors:   jamie@jgwhite.co.uk
 // License:   Licensed under MIT license
 // Copyright: © 2010 Jamie White
 // ==========================================================================
@@ -56,6 +56,10 @@ S3UploadWidget.prototype.initialize = function(options) {
   
   S3UploadWidget.instances.push(this);
   
+  this.set_hidden_value("AWSAccessKeyId", this.options()["aws_access_key_id"]);
+  this.set_hidden_value("policy", this.options()["policy"]);
+  this.set_hidden_value("signature", this.options()["signature"]);
+  
   if (this.options()["target"]) {
     this.insert(this.options()["target"]);
   }
@@ -75,6 +79,17 @@ S3UploadWidget.prototype.element = function() {
     this._element.id = this.id();
     
     this._element.appendChild(this.form());
+    
+    this.add_field({
+      "type": "file",
+      "name": "file"
+    });
+    
+    this._submit_button = this.add_field({
+      "type": "submit",
+      "value": "Upload",
+      "disabled": true
+    });
   }
   return this._element;
 }
@@ -85,16 +100,6 @@ S3UploadWidget.prototype.form = function() {
     this._form.action = "http://" + this.options()["bucket"] + ".s3.amazonaws.com/";
     this._form.method = "post";
     this._form.enctype = "multipart/form-data";
-    
-    var fieldset;
-    
-    fieldset = document.createElement("fieldset");
-    this._form.appendChild(fieldset);
-    fieldset.appendChild(this.file_input());
-    
-    fieldset = document.createElement("fieldset");
-    this._form.appendChild(fieldset);
-    fieldset.appendChild(this.submit_button());
   }
   return this._form;
 }
@@ -114,6 +119,7 @@ S3UploadWidget.prototype.submit_button = function() {
     this._submit_button.value = "Upload";
     this._submit_button.disabled = "disabled";
     this._submit_button.id = this.id() + "_submit_button";
+    this._submit_button.className = "s3_upload_widget_submit_button";
   }
   return this._submit_button;
 }
@@ -139,6 +145,38 @@ S3UploadWidget.prototype.unregister = function () {
 S3UploadWidget.prototype.dealloc = function() {
   for (var prop in this) if (prop.indexOf("_") === 0) delete this[prop];
 }
+S3UploadWidget.prototype.fields = function() {
+  return this._fields = this._fields || [];
+}
+S3UploadWidget.prototype.add_field = function(options) {
+  var field = new S3UploadWidget.Field().initialize(options);
+  this.fields().push(field);
+  this.form().appendChild(field.element());
+  return field;
+}
+S3UploadWidget.prototype.hidden_inputs = function() {
+  return this._hidden_inputs = this._hidden_inputs || {};
+}
+S3UploadWidget.prototype.set_hidden_value = function(name, value) {
+  var input = this.hidden_inputs()[name];
+  if (value !== null) {
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      this.form().appendChild(input);
+      this.hidden_inputs()[name] = input;
+    }
+    input.value = value;
+  } else {
+    input.parentNode.removeChild(input);
+    delete this.hidden_inputs()[name];
+  }
+}
+S3UploadWidget.prototype.set_hidden_values = function(values) {
+  for (var name in this.hidden_inputs()) this.set_hidden_value(name, null);
+  for (var name in values) this.set_hidden_value(name, values[name]);
+}
 
 S3UploadWidget.Field = function() {};
 S3UploadWidget.Field.DEFAULTS = { "type": "text" };
@@ -152,6 +190,7 @@ S3UploadWidget.Field.prototype.id = function() {
 S3UploadWidget.Field.prototype.element = function() {
   if (!this._element) {
     this._element = document.createElement("fieldset");
+    this._element.className = "s3_upload_widget_fieldset";
     this._element.appendChild(this.input());
   }
   return this._element
@@ -201,6 +240,7 @@ S3UploadWidget.Field.prototype.set_label = function(new_label) {
   if (new_label != undefined && new_label.length > 0) {
     if (!this._label) {
       this._label = document.createElement("label");
+      this._label.setAttribute("for", this.id() + "_input");
       this.element().appendChild(this._label);
     }
     this._label.innerHTML = new_label;
@@ -208,6 +248,18 @@ S3UploadWidget.Field.prototype.set_label = function(new_label) {
     if (this._label && this._label.parentNode) this._label.parentNode.removeChild(this._label);
     delete this.label;
   }
+}
+S3UploadWidget.Field.prototype.set_disabled = function(new_value) {
+  this.input().disabled = new_value;
+}
+S3UploadWidget.Field.prototype.disabled = function() {
+  return this.input().disabled;
+}
+S3UploadWidget.Field.prototype.set_checked = function(new_value) {
+  this.input().checked = new_value;
+}
+S3UploadWidget.Field.prototype.checked = function() {
+  return this.input().checked;
 }
 S3UploadWidget.Field.prototype.value = function() {
   return this.input().value;
@@ -224,4 +276,6 @@ S3UploadWidget.Field.prototype.initialize = function(new_options) {
     if (setter === undefined) continue; // TODO: throw error for unknown setter
     setter.apply(this, [options[key]]);
   }
+  
+  return this;
 }
