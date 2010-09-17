@@ -251,8 +251,24 @@ S3UploadWidget.Field.prototype.set_checked = function(new_value) {
 S3UploadWidget.Field.prototype.checked = function() {
   return this.input().checked;
 }
+S3UploadWidget.Field.prototype.set_valid_if = function(new_rules) {
+  this._valid_if = new_rules;
+}
+S3UploadWidget.Field.prototype.valid_if = function() {
+  return this._valid_if;
+}
 S3UploadWidget.Field.prototype.value = function() {
   return this.input().value;
+}
+S3UploadWidget.Field.prototype.valid = function() {
+  this.errors = [];
+  for (var property in this.valid_if()) {
+    var actual = this[property]();
+    var expected = this.valid_if()[property];
+    if (actual !== expected)
+      this.errors.push(property + " must be " + this.valid_if()[property]);
+  }
+  return this.errors.length === 0;
 }
 S3UploadWidget.Field.prototype.initialize = function(new_options) {
   var options = {};

@@ -175,7 +175,7 @@ describe("S3UploadWidget", function() {
     });
     
   });
-    
+  
   describe("#insert", function() {
     
     it("should append element to target", function() {
@@ -546,9 +546,45 @@ describe("S3UploadWidget", function() {
             
     });
     
+    describe("#set_valid_if", function() {
+      
+      it("should store the validates", function() {
+        var rules = { "checked": true };
+        field.set_valid_if(rules);
+        expect(field.valid_if()).toEqual(rules);
+      });
+      
+    });
+    
+    describe("#valid", function() {
+      
+      beforeEach(function() {
+        field.set_valid_if({ "checked": true });
+      });
+      
+      it("should return true for valid_if checked when the field is checked", function() {
+        field.set_checked(true);
+        expect(field.valid()).toBeTruthy();
+      });
+      
+      it("should return false for valid_if checked when the field is not checked", function() {
+        field.set_checked(false);
+        expect(field.valid()).toBeFalsy();
+      });
+      
+      it("should set errors", function() {
+        field.set_checked(false);
+        expect(field.valid()).toBeFalsy();
+        expect(field.errors).toBeDefined();
+        expect(field.errors.length).toEqual(1);
+        expect(field.errors[0]).toEqual("checked must be true");
+      });
+      
+    });
+    
   });
   
-  describe("Structure", function() {
+  describe("Complete structure", function() {
     var options;
     var widget;
     var fields;
@@ -650,6 +686,34 @@ describe("S3UploadWidget", function() {
       expect(submit_button).toBeDefined();
       expect(submit_button.nodeName).toEqual("INPUT");
       expect(submit_button.value).toEqual("Upload");
+    });
+    
+  });
+  
+  describe("Validation and button enable", function() {
+    var options;
+    var widget;
+    
+    beforeEach(function() {
+      options = widget_options({
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": "terms_agreed",
+            "value": "1",
+            "valid_if": { "checked": true }
+          }
+        ]
+      });
+      widget = S3UploadWidget.create(options);
+    });
+    
+    it("should enable the submit once a file chosen and terms agreed", function() {
+      expect(widget.submit_button().disabled()).toBeTruthy();
+      widget.fields()[0].set_value("myfile.zip");
+      expect(widget.submit_button().disabled()).toBeTruthy();
+      widget.fields()[1].set_checked(true);
+      expect(widget.submit_button().disabled()).toBeFalsy();
     });
     
   });
