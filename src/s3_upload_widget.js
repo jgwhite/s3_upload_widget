@@ -19,7 +19,7 @@ Array.prototype.indexOf = function(obj) {
 
 S3UploadWidget = function() {};
 S3UploadWidget.instances = [];
-S3UploadWidget.DEFAULTS = {};
+S3UploadWidget.DEFAULTS = { "key": "${filename}" };
 S3UploadWidget.REQUIRED_OPTIONS = [ "aws_access_key_id", "bucket", "policy", "signature" ];
 S3UploadWidget.generate_id = function() {
   if (S3UploadWidget.__id === undefined) S3UploadWidget.__id = 0;
@@ -58,7 +58,8 @@ S3UploadWidget.prototype.initialize = function(options) {
   this.set_hidden_values({
     "AWSAccessKeyId": this.options()["aws_access_key_id"],
     "policy": this.options()["policy"],
-    "signature": this.options()["signature"]
+    "signature": this.options()["signature"],
+    "key": this.options()["key"]
   });
   
   //--- add the file field (you don't get a choice about that)

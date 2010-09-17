@@ -604,10 +604,16 @@ describe("S3UploadWidget", function() {
       expect(input.value).toEqual(options["policy"]);
     });
     
-    it("should contain a hidden input for policy", function() {
+    it("should contain a hidden input for signature", function() {
       var input = $("input[name='signature']", widget.form())[0];
       expect(input).toBeDefined();
       expect(input.value).toEqual(options["signature"]);
+    });
+    
+    it("should contain a hidden input for key", function() {
+      var input = $("input[name='key']", widget.form())[0];
+      expect(input).toBeDefined();
+      expect(input.value).toEqual(S3UploadWidget.DEFAULTS["key"]);
     });
     
     it("should, first, contain a field for my file", function() {
