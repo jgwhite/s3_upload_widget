@@ -197,6 +197,7 @@ S3UploadWidget.prototype.validate = function() {
 }
 S3UploadWidget.prototype.init_plupload = function() {
   if (window.plupload) {
+    this._file_field.make_shim_receiver();
     this._uploader = new plupload.Uploader({
       runtimes:      "html5,flash,html4",
       flash_swf_url: "lib/plupload-1.2.4/plupload.flash.swf",
@@ -261,7 +262,9 @@ S3UploadWidget.prototype.on_uploader_init = function(u, params) {
   this.uploader_ready = true;
 }
 S3UploadWidget.prototype.on_uploader_error = function(u, error) {}
-S3UploadWidget.prototype.on_uploader_files_added = function(u, files) {}
+S3UploadWidget.prototype.on_uploader_files_added = function(u, files) {
+  this._file_field.set_label(files[0].name);
+}
 S3UploadWidget.prototype.on_uploader_before_upload = function(u, file) {}
 S3UploadWidget.prototype.on_uploader_upload_file = function(u, file) {}
 S3UploadWidget.prototype.on_uploader_upload_progress = function(u, file) {}
@@ -296,7 +299,6 @@ S3UploadWidget.Field.prototype.element = function() {
     this._element = document.createElement("fieldset");
     this._element.className = "s3_upload_widget_fieldset";
     this._element.id = this.id();
-    this._element.appendChild(this.input());
   }
   return this._element
 }
@@ -317,18 +319,20 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
     break;
   default:
     this._input = document.createElement("input");
-    this._input.setAttribute("type", type);
+    this._input.type = type;
     break;
   }
   
   this._input.id = this.id() + "_input";
   this._input.name = name;
-  this._input.value = value;
+  if (value && type !== "file") this._input.value = value;
   
   this.__onchange = this._on_change.bind(this);
   this._input.onchange = this.__onchange;
   this._input.onclick = this.__onchange;
   this._input.onkeypress = this.__onchange;
+  
+  this.element().appendChild(this.input());
 }
 S3UploadWidget.Field.prototype.input = function() {
   if (!this._input) this.make_input();
@@ -347,6 +351,7 @@ S3UploadWidget.Field.prototype.name = function() {
   return this.input().name;
 }
 S3UploadWidget.Field.prototype.set_value = function(new_value) {
+  if (this.input().type === "file") return;
   this.input().value = new_value;
   this._on_change();
 }
@@ -419,5 +424,5 @@ S3UploadWidget.Field.prototype._on_change = function() {
 S3UploadWidget.Field.prototype.on_change = null;
 S3UploadWidget.Field.prototype.make_shim_receiver = function() {
   this.set_type("button");
-  this.set_value("Choose file&hellip;");
+  this.set_value("Choose File");
 }

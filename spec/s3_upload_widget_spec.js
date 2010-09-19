@@ -327,7 +327,9 @@ describe("S3UploadWidget", function() {
     var widget;
     
     beforeEach(function() {
-      widget = S3UploadWidget.create(widget_options());
+      widget = S3UploadWidget.create(widget_options({
+        "fields": [ { "type": "text", "value": "", "name": "my_field" } ]
+      }));
     });
     afterEach(function() {
       widget.remove();
@@ -336,8 +338,8 @@ describe("S3UploadWidget", function() {
     
     it("should be called when a value is changed", function() {
       spyOn(widget, "on_field_change");
-      widget.fields()[0].set_value("foo");
-      expect(widget.on_field_change).toHaveBeenCalledWith(widget.fields()[0]);
+      widget.fields()[1].set_value("foo");
+      expect(widget.on_field_change).toHaveBeenCalledWith(widget.fields()[1]);
     });
     
   });
@@ -388,10 +390,6 @@ describe("S3UploadWidget", function() {
         expect(field.element().nodeName).toEqual("FIELDSET");
         expect(field.element().className).toEqual("s3_upload_widget_fieldset");
         expect(field.element().id).toEqual(field.id());
-      });
-      
-      it("should contain input", function() {
-        expect(field.element().childNodes[0]).toEqual(field.input());
       });
             
     });
@@ -469,6 +467,7 @@ describe("S3UploadWidget", function() {
       });
       
       it("should preserve existing value", function() {
+        field.set_type("text");
         field.set_value("bar");
         expect(field.input().value).toEqual("bar");
         field.make_input("textarea");
@@ -679,7 +678,7 @@ describe("S3UploadWidget", function() {
         field.make_shim_receiver();
         expect(field.input().nodeName).toEqual("INPUT");
         expect(field.input().type).toEqual("button");
-        expect(field.input().value).toEqual("Choose file&hellip;");
+        expect(field.input().value).toEqual("Choose File");
       });
       
     });
@@ -835,7 +834,11 @@ describe("S3UploadWidget", function() {
       waitsFor(function() { return widget.uploader() != null }, "widget to init Plupload", 500);
       waitsFor(function() { return widget.uploader_ready === true }, "Plupload runtime to init", 500);
       
-      runs(function() { widget.remove() });
+      runs(function() {
+        var file = new plupload.File("myfile123", "myfilm.zip", 1024);
+        widget.uploader().trigger("FilesAdded", [file]);
+        expect(widget.fields()[0].label()).toEqual(file.name);
+      });
     });
     
   });
