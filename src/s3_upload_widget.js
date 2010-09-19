@@ -88,6 +88,9 @@ S3UploadWidget.prototype.initialize = function(options) {
   //--- if a target is specified, append the element
   if (this.options()["target"]) this.insert(this.options()["target"]);
   
+  //--- init plupload
+  if (this.options()["plupload_src"]) this.init_plupload();
+  
   //--- return the instance
   return this;
 }
@@ -178,8 +181,68 @@ S3UploadWidget.prototype._on_field_change = function(field) {
   if (this.on_field_change) this.on_field_change(field);
 }
 S3UploadWidget.prototype.on_field_change = function(field) {
-  
+  this.validate();
 }
+S3UploadWidget.prototype.validate = function() {
+  this.errors = [];
+  for (var i = 0; i < this.fields().length; i++) {
+    if (!this.fields()[i].valid()) this.errors.push(this.fields()[i]);
+  }
+  if (this.errors.length > 0) {
+    this._submit_button.set_disabled(true);
+  } else {
+    this._submit_button.set_disabled(false);
+  }
+}
+S3UploadWidget.prototype.init_plupload = function() {
+  if (window.plupload) {
+    this._uploader = new plupload.Uploader({
+      runtimes:      "html5,flash,html4",
+      flash_swf_url: "/lib/plupload-1.2.4/plupload.flash.swf",
+      url:           this.form().action,
+      container:     this.element().id,
+      browse_button: this._submit_button.input().id,
+      drop_element:  this._file_field.input().id
+    });
+    this._uploader.bind("Init",           this.on_uploader_init.bind(this));
+    this._uploader.bind("Error",          this.on_uploader_error.bind(this));
+    this._uploader.bind("FilesAdded",     this.on_uploader_files_added.bind(this));
+    this._uploader.bind("BeforeUpload",   this.on_uploader_before_upload.bind(this));
+    this._uploader.bind("UploadFile",     this.on_uploader_upload_file.bind(this));
+    this._uploader.bind("UploadProgress", this.on_uploader_upload_progress.bind(this));
+    this._uploader.bind("FileUploaded",   this.on_uploader_file_uploaded.bind(this));
+    this._uploader.init();
+  } else {
+    // load plupload
+    var script = document.createElement("script");
+    script.src = this.options()["plupload_src"];
+    script.type = "text/javascript";
+    document.body.appendChild(script);
+    this.wait_for_plupload();
+  }
+}
+S3UploadWidget.prototype.wait_for_plupload = function() {
+  if (window.plupload) {
+    this.on_plupload_ready();
+  } else {
+    window.setTimeout(this.wait_for_plupload.bind(this), 100);
+  }
+}
+S3UploadWidget.prototype.on_plupload_ready = function() {
+  this.init_plupload();
+}
+S3UploadWidget.prototype.uploader = function() {
+  return this._uploader;
+}
+S3UploadWidget.prototype.on_uploader_init = function(u, params) {
+  this.uploader_ready = true;
+}
+S3UploadWidget.prototype.on_uploader_error = function(u, error) {}
+S3UploadWidget.prototype.on_uploader_files_added = function(u, files) {}
+S3UploadWidget.prototype.on_uploader_before_upload = function(u, file) {}
+S3UploadWidget.prototype.on_uploader_upload_file = function(u, file) {}
+S3UploadWidget.prototype.on_uploader_upload_progress = function(u, file) {}
+S3UploadWidget.prototype.on_uploader_file_uploaded = function(u, file, response) {}
 
 S3UploadWidget.Field = function() {};
 S3UploadWidget.Field.DEFAULTS = { "type": "text" };
@@ -239,7 +302,10 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
   this._input.name = name;
   this._input.value = value;
   
-  this._input.onchange = this._on_change.bind(this);
+  this.__onchange = this._on_change.bind(this);
+  this._input.onchange = this.__onchange;
+  this._input.onclick = this.__onchange;
+  this._input.onkeypress = this.__onchange;
 }
 S3UploadWidget.Field.prototype.input = function() {
   if (!this._input) this.make_input();
@@ -304,8 +370,23 @@ S3UploadWidget.Field.prototype.valid = function() {
   for (var property in this.valid_if()) {
     var actual = this[property]();
     var expected = this.valid_if()[property];
-    if (actual !== expected)
-      this.errors.push(property + " must be " + this.valid_if()[property]);
+    var result = false;
+    var message = "must be " + this.valid_if()[property];
+    
+    if (expected instanceof RegExp) {
+      message = "is not acceptable";
+      result = expected.test(actual);
+    } else if (expected === "is not blank") {
+      message = "must not be blank";
+      result = (actual !== undefined && actual !== null && (/^\s*$/).test(actual) !== true);
+    } else if (expected === true) {
+      message = "required";
+      result = expected === actual;
+    } else {
+      result = expected === actual;
+    }
+    
+    if (result === false) this.errors.push(message);
   }
   return this.errors.length === 0;
 }

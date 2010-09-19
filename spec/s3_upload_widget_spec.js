@@ -11,9 +11,9 @@ describe("S3UploadWidget", function() {
   afterEach(function () {
     document.body.removeChild(my_target);
     delete my_target;
-    for (var i = S3UploadWidget.instances.length - 1; i >= 0; i--) {
-      S3UploadWidget.instances[i].remove();
-    }
+    // for (var i = S3UploadWidget.instances.length - 1; i >= 0; i--) {
+    //   S3UploadWidget.instances[i].remove();
+    // }
   });
   
   describe("#initialize", function() {
@@ -101,14 +101,10 @@ describe("S3UploadWidget", function() {
   describe("#unregister", function() {
     
     it("should unregister the instance", function() {
-      expect(S3UploadWidget.instances.length).toEqual(0);
-      
       var widget = S3UploadWidget.create(widget_options());
-      expect(S3UploadWidget.instances.length).toEqual(1);
       expect(S3UploadWidget.instances.indexOf(widget)).not.toEqual(-1);
       
       widget.unregister();
-      expect(S3UploadWidget.instances.length).toEqual(0);
       expect(S3UploadWidget.instances.indexOf(widget)).toEqual(-1);
     });
     
@@ -577,26 +573,88 @@ describe("S3UploadWidget", function() {
     
     describe("#valid", function() {
       
-      beforeEach(function() {
-        field.set_valid_if({ "checked": true });
+      describe("if checked", function() {
+        
+        beforeEach(function() {
+          field.set_valid_if({ "checked": true });
+        });
+        
+        it("should return true for valid_if checked when the field is checked", function() {
+          field.set_checked(true);
+          expect(field.valid()).toBeTruthy();
+        });
+        
+        it("should return false for valid_if checked when the field is not checked", function() {
+          field.set_checked(false);
+          expect(field.valid()).toBeFalsy();
+          expect(field.errors.length).toEqual(1);
+          expect(field.errors[0]).toEqual("required");
+        });
+        
       });
       
-      it("should return true for valid_if checked when the field is checked", function() {
-        field.set_checked(true);
-        expect(field.valid()).toBeTruthy();
+      describe("if string match", function() {
+        
+        beforeEach(function() {
+          field.set_type("text");
+          field.set_valid_if({ "value": "foo" });
+        });
+        
+        it("should return true for valid_if when the field's value matches", function() {
+          field.set_value("foo");
+          expect(field.valid()).toBeTruthy();
+          expect(field.errors.length).toEqual(0);
+        });
+        
+        it("should return false for valid_if when the field's value matches", function() {
+          field.set_value("not foo");
+          expect(field.valid()).toBeFalsy();
+          expect(field.errors.length).toEqual(1);
+          expect(field.errors[0]).toEqual("must be foo");
+        });
+        
       });
       
-      it("should return false for valid_if checked when the field is not checked", function() {
-        field.set_checked(false);
-        expect(field.valid()).toBeFalsy();
+      describe("if regexp match", function() {
+        
+        beforeEach(function() {
+          field.set_type("text");
+          field.set_valid_if({ "value": /[a-z]+@[a-z]+\.com/ });
+        });
+        
+        it("should return true if the value matches", function() {
+          field.set_value("johnsmith@gmail.com");
+          expect(field.valid()).toBeTruthy();
+        });
+        
+        it("should return false if the value doesn't match", function() {
+          field.set_value("johnsmith AT gmail DOT com");
+          expect(field.valid()).toBeFalsy();
+          expect(field.errors.length).toEqual(1);
+          expect(field.errors[0]).toEqual("is not acceptable");
+        });
+        
       });
       
-      it("should set errors", function() {
-        field.set_checked(false);
-        expect(field.valid()).toBeFalsy();
-        expect(field.errors).toBeDefined();
-        expect(field.errors.length).toEqual(1);
-        expect(field.errors[0]).toEqual("checked must be true");
+      describe("if is not blank", function() {
+        
+        beforeEach(function() {
+          field.set_type("text");
+          field.set_valid_if({ "value": "is not blank" });
+        });
+        
+        it("should return true if the value is not blank", function() {
+          field.set_value("foo");
+          expect(field.valid()).toBeTruthy();
+        });
+        
+        it("should return false if the value is blank", function() {
+          field.set_value("");
+          expect(field.valid()).toBeFalsy();
+          expect(field.errors.length).toEqual(1);
+          expect(field.errors[0]).toEqual("must not be blank");
+        });
+        
       });
       
     });
@@ -738,13 +796,36 @@ describe("S3UploadWidget", function() {
       widget = S3UploadWidget.create(options);
     });
     
-    // it("should enable the submit once a file chosen and terms agreed", function() {
-    //   expect(widget.submit_button().disabled()).toBeTruthy();
-    //   widget.fields()[0].set_value("myfile.zip");
-    //   expect(widget.submit_button().disabled()).toBeTruthy();
-    //   widget.fields()[1].set_checked(true);
-    //   expect(widget.submit_button().disabled()).toBeFalsy();
+    it("should enable the submit once a file chosen and terms agreed", function() {
+      expect(widget.submit_button().disabled()).toBeTruthy();
+      widget.fields()[0].set_value("myfile.zip");
+      expect(widget.submit_button().disabled()).toBeTruthy();
+      widget.fields()[1].set_checked(true);
+      expect(widget.submit_button().disabled()).toBeFalsy();
+    });
+    
+  });
+  
+  describe("Plupload integration", function() {
+    
+    // it("should require plupload from given source", function() {
+    //   runs(function() {
+    //     if (window.plupload) delete window.plupload;
+    //     expect(window.plupload).not.toBeDefined();
+    //     S3UploadWidget.create(widget_options_with_plupload());
+    //   });
+    //   
+    //   waitsFor(function() { return window.plupload != null }, "Plupload to load", 500);
     // });
+    
+    it("should init a plupload object", function() {
+      var widget;
+      runs(function() {
+        widget = S3UploadWidget.create(widget_options_with_plupload());
+      });
+      waitsFor(function() { return widget.uploader() != null }, "widget to init Plupload", 500);
+      waitsFor(function() { return widget.uploader_ready === true }, "Plupload runtime to init", 500);
+    });
     
   });
   

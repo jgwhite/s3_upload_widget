@@ -9,3 +9,10 @@ function widget_options(options) {
   
   return result;
 }
+
+function widget_options_with_plupload(options) {
+  return widget_options({
+    "target": "my_target",
+    "plupload_src": "lib/plupload-1.2.4/plupload.full.min.js"
+  });
+}
