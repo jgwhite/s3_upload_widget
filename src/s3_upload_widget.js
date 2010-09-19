@@ -16,6 +16,10 @@ Array.prototype.indexOf = function(obj) {
     if (this[i] === obj) { return i; }
   return -1;
 }
+Function.prototype.bind = function(scope) {
+  var __method = this;
+  return function() { return __method.apply(scope, arguments) };
+}
 
 S3UploadWidget = function() {};
 S3UploadWidget.instances = [];
@@ -141,6 +145,7 @@ S3UploadWidget.prototype.add_field = function(options) {
   var field = new S3UploadWidget.Field().initialize(options);
   this.fields().push(field);
   this.form().appendChild(field.element());
+  field.on_change = this._on_field_change.bind(this);
   return field;
 }
 S3UploadWidget.prototype.hidden_inputs = function() {
@@ -166,12 +171,36 @@ S3UploadWidget.prototype.set_hidden_values = function(values) {
   for (var name in this.hidden_inputs()) this.set_hidden_value(name, null);
   for (var name in values) this.set_hidden_value(name, values[name]);
 }
+S3UploadWidget.prototype.submit_button = function() {
+  return this._submit_button;
+}
+S3UploadWidget.prototype._on_field_change = function(field) {
+  if (this.on_field_change) this.on_field_change(field);
+}
+S3UploadWidget.prototype.on_field_change = function(field) {
+  
+}
 
 S3UploadWidget.Field = function() {};
 S3UploadWidget.Field.DEFAULTS = { "type": "text" };
 S3UploadWidget.Field.generate_id = function() {
   if (S3UploadWidget.Field.__id === undefined) S3UploadWidget.Field.__id = 0;
   return S3UploadWidget.Field.__id++;
+}
+S3UploadWidget.Field.prototype.initialize = function(new_options) {
+  var options = {};
+  for (var key in S3UploadWidget.Field.DEFAULTS)
+    options[key] = S3UploadWidget.Field.DEFAULTS[key];
+  for (var key in new_options)
+    options[key] = new_options[key];
+  
+  for (var key in options) {
+    var setter = this["set_" + key];
+    if (setter === undefined) continue; // TODO: throw error for unknown setter
+    setter.apply(this, [options[key]]);
+  }
+  
+  return this;
 }
 S3UploadWidget.Field.prototype.id = function() {
   return this._id = this._id || ("s3_upload_widget_field_" + S3UploadWidget.Field.generate_id());
@@ -194,7 +223,7 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
     delete this._input;
   }
   
-  type = type || S3UploadWidget.Field.DEFAULTS;
+  type = type || S3UploadWidget.Field.DEFAULTS["type"];
   
   switch (type) {
   case "textarea":
@@ -209,6 +238,8 @@ S3UploadWidget.Field.prototype.make_input = function(type) {
   this._input.id = this.id() + "_input";
   this._input.name = name;
   this._input.value = value;
+  
+  this._input.onchange = this._on_change.bind(this);
 }
 S3UploadWidget.Field.prototype.input = function() {
   if (!this._input) this.make_input();
@@ -223,8 +254,15 @@ S3UploadWidget.Field.prototype.set_type = function(new_type) {
 S3UploadWidget.Field.prototype.set_name = function(new_name) {
   this.input().name = new_name;
 }
+S3UploadWidget.Field.prototype.name = function() {
+  return this.input().name;
+}
 S3UploadWidget.Field.prototype.set_value = function(new_value) {
   this.input().value = new_value;
+  this._on_change();
+}
+S3UploadWidget.Field.prototype.value = function() {
+  return this.input().value;
 }
 S3UploadWidget.Field.prototype.set_label = function(new_label) {
   if (new_label != undefined && new_label.length > 0) {
@@ -239,6 +277,9 @@ S3UploadWidget.Field.prototype.set_label = function(new_label) {
     delete this.label;
   }
 }
+S3UploadWidget.Field.prototype.label = function() {
+  return this._label && this._label.innerHTML;
+}
 S3UploadWidget.Field.prototype.set_disabled = function(new_value) {
   this.input().disabled = new_value;
 }
@@ -247,6 +288,7 @@ S3UploadWidget.Field.prototype.disabled = function() {
 }
 S3UploadWidget.Field.prototype.set_checked = function(new_value) {
   this.input().checked = new_value;
+  this._on_change();
 }
 S3UploadWidget.Field.prototype.checked = function() {
   return this.input().checked;
@@ -256,9 +298,6 @@ S3UploadWidget.Field.prototype.set_valid_if = function(new_rules) {
 }
 S3UploadWidget.Field.prototype.valid_if = function() {
   return this._valid_if;
-}
-S3UploadWidget.Field.prototype.value = function() {
-  return this.input().value;
 }
 S3UploadWidget.Field.prototype.valid = function() {
   this.errors = [];
@@ -270,18 +309,7 @@ S3UploadWidget.Field.prototype.valid = function() {
   }
   return this.errors.length === 0;
 }
-S3UploadWidget.Field.prototype.initialize = function(new_options) {
-  var options = {};
-  for (var key in S3UploadWidget.Field.DEFAULTS)
-    options[key] = S3UploadWidget.Field.DEFAULTS[key];
-  for (var key in new_options)
-    options[key] = new_options[key];
-  
-  for (var key in options) {
-    var setter = this["set_" + key];
-    if (setter === undefined) continue; // TODO: throw error for unknown setter
-    setter.apply(this, [options[key]]);
-  }
-  
-  return this;
+S3UploadWidget.Field.prototype._on_change = function() {
+  if (this.on_change) this.on_change(this);
 }
+S3UploadWidget.Field.prototype.on_change = null;
