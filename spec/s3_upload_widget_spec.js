@@ -808,23 +808,20 @@ describe("S3UploadWidget", function() {
   
   describe("Plupload integration", function() {
     
-    // it("should require plupload from given source", function() {
-    //   runs(function() {
-    //     if (window.plupload) delete window.plupload;
-    //     expect(window.plupload).not.toBeDefined();
-    //     S3UploadWidget.create(widget_options_with_plupload());
-    //   });
-    //   
-    //   waitsFor(function() { return window.plupload != null }, "Plupload to load", 500);
-    // });
-    
-    it("should init a plupload object", function() {
+    it("should require plupload from given source and init", function() {
       var widget;
+      
       runs(function() {
+        if (window.plupload) delete window.plupload;
+        expect(window.plupload).not.toBeDefined();
         widget = S3UploadWidget.create(widget_options_with_plupload());
       });
+      
+      waitsFor(function() { return window.plupload != null }, "Plupload to load", 500);
       waitsFor(function() { return widget.uploader() != null }, "widget to init Plupload", 500);
       waitsFor(function() { return widget.uploader_ready === true }, "Plupload runtime to init", 500);
+      
+      runs(function() { widget.remove() });
     });
     
   });

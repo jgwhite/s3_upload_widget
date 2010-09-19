@@ -128,6 +128,7 @@ S3UploadWidget.prototype.insert = function(target) {
 }
 S3UploadWidget.prototype.remove = function() {
   this.unregister();
+  this.unbind_uploader();
   this.remove_elements();
   this.dealloc();
 }
@@ -198,22 +199,14 @@ S3UploadWidget.prototype.init_plupload = function() {
   if (window.plupload) {
     this._uploader = new plupload.Uploader({
       runtimes:      "html5,flash,html4",
-      flash_swf_url: "/lib/plupload-1.2.4/plupload.flash.swf",
+      flash_swf_url: "lib/plupload-1.2.4/plupload.flash.swf",
       url:           this.form().action,
       container:     this.element().id,
-      browse_button: this._submit_button.input().id,
-      drop_element:  this._file_field.input().id
+      browse_button: this._file_field.input().id
     });
-    this._uploader.bind("Init",           this.on_uploader_init.bind(this));
-    this._uploader.bind("Error",          this.on_uploader_error.bind(this));
-    this._uploader.bind("FilesAdded",     this.on_uploader_files_added.bind(this));
-    this._uploader.bind("BeforeUpload",   this.on_uploader_before_upload.bind(this));
-    this._uploader.bind("UploadFile",     this.on_uploader_upload_file.bind(this));
-    this._uploader.bind("UploadProgress", this.on_uploader_upload_progress.bind(this));
-    this._uploader.bind("FileUploaded",   this.on_uploader_file_uploaded.bind(this));
+    this.bind_uploader();
     this._uploader.init();
   } else {
-    // load plupload
     var script = document.createElement("script");
     script.src = this.options()["plupload_src"];
     script.type = "text/javascript";
@@ -233,6 +226,36 @@ S3UploadWidget.prototype.on_plupload_ready = function() {
 }
 S3UploadWidget.prototype.uploader = function() {
   return this._uploader;
+}
+S3UploadWidget.prototype.bind_uploader = function() {
+  if (!this._uploader) return;
+  
+  this.__on_uploader_init               = this.on_uploader_init.bind(this);
+  this.__on_uploader_error              = this.on_uploader_error.bind(this);
+  this.__on_uploader_files_added        = this.on_uploader_files_added.bind(this);
+  this.__on_uploader_before_upload      = this.on_uploader_before_upload.bind(this);
+  this.__on_uploader_upload_file        = this.on_uploader_upload_file.bind(this);
+  this.__on_uploader_upload_progress    = this.on_uploader_upload_progress.bind(this);
+  this.__on_uploader_file_uploaded      = this.on_uploader_file_uploaded.bind(this);
+                                        
+  this._uploader.bind("Init"            , this.__on_uploader_init);
+  this._uploader.bind("Error"           , this.__on_uploader_error);
+  this._uploader.bind("FilesAdded"      , this.__on_uploader_files_added);
+  this._uploader.bind("BeforeUpload"    , this.__on_uploader_before_upload);
+  this._uploader.bind("UploadFile"      , this.__on_uploader_upload_file);
+  this._uploader.bind("UploadProgress"  , this.__on_uploader_upload_progress);
+  this._uploader.bind("FileUploaded"    , this.__on_uploader_file_uploaded);
+}
+S3UploadWidget.prototype.unbind_uploader = function() {
+  if (!this._uploader) return;
+  
+  this._uploader.unbind("Init"          , this.__on_uploader_init);
+  this._uploader.unbind("Error"         , this.__on_uploader_error);
+  this._uploader.unbind("FilesAdded"    , this.__on_uploader_files_added);
+  this._uploader.unbind("BeforeUpload"  , this.__on_uploader_before_upload);
+  this._uploader.unbind("UploadFile"    , this.__on_uploader_upload_file);
+  this._uploader.unbind("UploadProgress", this.__on_uploader_upload_progress);
+  this._uploader.unbind("FileUploaded"  , this.__on_uploader_file_uploaded);
 }
 S3UploadWidget.prototype.on_uploader_init = function(u, params) {
   this.uploader_ready = true;
