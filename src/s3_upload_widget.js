@@ -417,3 +417,7 @@ S3UploadWidget.Field.prototype._on_change = function() {
   if (this.on_change) this.on_change(this);
 }
 S3UploadWidget.Field.prototype.on_change = null;
+S3UploadWidget.Field.prototype.make_shim_receiver = function() {
+  this.set_type("button");
+  this.set_value("Choose file&hellip;");
+}

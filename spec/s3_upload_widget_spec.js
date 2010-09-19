@@ -670,6 +670,20 @@ describe("S3UploadWidget", function() {
       
     });
     
+    describe("#make_shim_receiver", function() {
+      
+      it("should convert a file input into a button", function() {
+        field.set_type("file");
+        expect(field.input().nodeName).toEqual("INPUT");
+        expect(field.input().type).toEqual("file");
+        field.make_shim_receiver();
+        expect(field.input().nodeName).toEqual("INPUT");
+        expect(field.input().type).toEqual("button");
+        expect(field.input().value).toEqual("Choose file&hellip;");
+      });
+      
+    });
+    
   });
   
   describe("Complete structure", function() {
