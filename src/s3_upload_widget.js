@@ -129,6 +129,7 @@ S3UploadWidget.prototype.form = function() {
     this._form.action = "http://" + this.options()["bucket"] + ".s3.amazonaws.com/";
     this._form.method = "post";
     this._form.enctype = "multipart/form-data";
+    this._form.className = "s3_upload_widget_form";
   }
   return this._form;
 }
@@ -312,9 +313,10 @@ S3UploadWidget.prototype._on_submit = function(event) {
 S3UploadWidget.prototype.on_submit = function(event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
   
-  this.form().style.display = "block";
-  this.form().style.position = "relative";
-  this.form().style.overflow = "hidden";
+  // this.form().style.display = "block";
+  // this.form().style.position = "relative";
+  // this.form().style.overflow = "hidden";
+  this.form().style.height = "0px";
   
   this._progress_display = new S3UploadWidget.ProgressDisplay();
   this.element().appendChild(this._progress_display.element());
