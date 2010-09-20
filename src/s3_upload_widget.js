@@ -96,7 +96,7 @@ S3UploadWidget.prototype.initialize = function(options) {
   if (this.options()["target"]) this.insert(this.options()["target"]);
   
   //--- init plupload
-  if (this.options()["plupload_src"]) this.init_plupload();
+  if (this.options()["swfupload"]) this.init_uploader();
   
   //--- return the instance
   return this;
@@ -135,7 +135,6 @@ S3UploadWidget.prototype.insert = function(target) {
 }
 S3UploadWidget.prototype.remove = function() {
   this.unregister();
-  this.unbind_uploader();
   this.remove_elements();
   this.dealloc();
 }
@@ -201,7 +200,7 @@ S3UploadWidget.prototype.validate = function() {
     if (!this.fields()[i].valid()) this.errors.push(this.fields()[i]);
   }
   
-  if (this.options()["plupload_src"] && this.uploader() && this.uploader().files.length === 0) {
+  if (this.options()["swfupload"] && this.uploader() && this.uploader().getFile(0) == undefined) {
     this.file_field().errors = [];
     this.file_field().errors.push("you need to choose a file");
     this.errors.push(this.file_field());
@@ -215,115 +214,121 @@ S3UploadWidget.prototype.validate = function() {
   
   return this.errors.length === 0;
 }
-S3UploadWidget.prototype.init_plupload = function() {
-  if (window.plupload) {
-    this._file_field.make_shim_receiver();
-    this._uploader = new plupload.Uploader({
-      runtimes:          "html5,flash,html4",
-      flash_swf_url:     "lib/plupload-1.2.4/plupload.flash.swf",
-      url:               this.form().action,
-      container:         this.element().id,
-      browse_button:     this._file_field.input().id,
-      unique_names:      true,
-      multipart:         true,
-      multipart_params:  this.payload(),
-      required_features: "multipart",
-      multi_selection:   false
+S3UploadWidget.prototype.init_uploader = function() {
+  if (window.SWFUpload) {
+    console.log(this.payload());
+    this._uploader = new SWFUpload({
+      upload_url: this.form().action,
+      flash_url: this.options()["swfupload"]["swf"],
+      file_post_name: "file",
+      post_params: this.payload(),
+      use_query_string: false,
+      button_placeholder: this.file_field().input(),
+      button_image_url: "/upload_button_sprite.png",
+      button_cursor: SWFUpload.CURSOR.HAND,
+      button_width: 84,
+      button_height: 22,
+      button_text: '',
+      button_text_style: ".button { font-family: Arial; color: #ffffff; }",
+      button_window_mode: SWFUpload.WINDOW_MODE.TRANSPARENT,
+      
+      swfupload_loaded_handler: this.swfupload_loaded_handler.bind(this),
+      file_dialog_start_handler: this.file_dialog_start_handler.bind(this),
+      file_queued_handler: this.file_queued_handler.bind(this),
+      file_queue_error_handler: this.file_queue_error_handler.bind(this),
+      file_dialog_complete_handler: this.file_dialog_complete_handler.bind(this),
+      upload_start_handler: this.upload_start_handler.bind(this),
+      upload_progress_handler: this.upload_progress_handler.bind(this),
+      upload_error_handler: this.upload_error_handler.bind(this),
+      upload_success_handler: this.upload_success_handler.bind(this),
+      upload_complete_handler: this.upload_complete_handler.bind(this),
+      debug_handler: this.debug_handler.bind(this)
     });
-    this.bind_uploader();
-    this._uploader.init();
   } else {
     var script = document.createElement("script");
-    script.src = this.options()["plupload_src"];
+    script.src = this.options()["swfupload"]["src"];
     script.type = "text/javascript";
     document.body.appendChild(script);
-    this.wait_for_plupload();
+    this.wait_for_uploader();
   }
 }
-S3UploadWidget.prototype.wait_for_plupload = function() {
-  if (window.plupload) {
-    this.on_plupload_ready();
+S3UploadWidget.prototype.wait_for_uploader = function() {
+  if (window.SWFUpload) {
+    this.on_uploader_ready();
   } else {
-    window.setTimeout(this.wait_for_plupload.bind(this), 100);
+    window.setTimeout(this.wait_for_uploader.bind(this), 100);
   }
 }
-S3UploadWidget.prototype.on_plupload_ready = function() {
-  this.init_plupload();
+S3UploadWidget.prototype.on_uploader_ready = function() {
+  this.init_uploader();
 }
 S3UploadWidget.prototype.uploader = function() {
   return this._uploader;
 }
-S3UploadWidget.prototype.bind_uploader = function() {
-  if (!this._uploader) return;
+S3UploadWidget.prototype.swfupload_loaded_handler = function() {}
+S3UploadWidget.prototype.file_dialog_start_handler = function() {}
+S3UploadWidget.prototype.file_queued_handler = function(file) {
+  this.file_field().set_label(file.name);
+}
+S3UploadWidget.prototype.file_queue_error_handler = function() {}
+S3UploadWidget.prototype.file_dialog_complete_handler = function() {}
+S3UploadWidget.prototype.upload_start_handler = function() {
   
-  this.__on_uploader_init               = this.on_uploader_init.bind(this);
-  this.__on_uploader_error              = this.on_uploader_error.bind(this);
-  this.__on_uploader_queue_changed      = this.on_uploader_queue_changed.bind(this);
-  this.__on_uploader_before_upload      = this.on_uploader_before_upload.bind(this);
-  this.__on_uploader_upload_file        = this.on_uploader_upload_file.bind(this);
-  this.__on_uploader_upload_progress    = this.on_uploader_upload_progress.bind(this);
-  this.__on_uploader_file_uploaded      = this.on_uploader_file_uploaded.bind(this);
-                                        
-  this._uploader.bind("Init"            , this.__on_uploader_init);
-  this._uploader.bind("Error"           , this.__on_uploader_error);
-  this._uploader.bind("QueueChanged"    , this.__on_uploader_queue_changed);
-  this._uploader.bind("BeforeUpload"    , this.__on_uploader_before_upload);
-  this._uploader.bind("UploadFile"      , this.__on_uploader_upload_file);
-  this._uploader.bind("UploadProgress"  , this.__on_uploader_upload_progress);
-  this._uploader.bind("FileUploaded"    , this.__on_uploader_file_uploaded);
 }
-S3UploadWidget.prototype.unbind_uploader = function() {
-  if (!this._uploader) return;
+S3UploadWidget.prototype.upload_progress_handler = function(file, sent, total) {
+  this.progress_display().set_progress({
+    loaded: sent,
+    size: total,
+    percent: (sent / total) * 100
+  });
+}
+S3UploadWidget.prototype.upload_error_handler = function(file, code, messages) {
+  // TODO: handle upload error
+}
+S3UploadWidget.prototype.upload_success_handler = function() {
+  this.progress_display().element().style.display = "none";
+  this.element().appendChild(this.thanks());
+}
+S3UploadWidget.prototype.upload_complete_handler = function() {
   
-  this._uploader.unbind("Init"          , this.__on_uploader_init);
-  this._uploader.unbind("Error"         , this.__on_uploader_error);
-  this._uploader.unbind("QueueChanged"  , this.__on_uploader_queue_changed);
-  this._uploader.unbind("BeforeUpload"  , this.__on_uploader_before_upload);
-  this._uploader.unbind("UploadFile"    , this.__on_uploader_upload_file);
-  this._uploader.unbind("UploadProgress", this.__on_uploader_upload_progress);
-  this._uploader.unbind("FileUploaded"  , this.__on_uploader_file_uploaded);
 }
-S3UploadWidget.prototype.on_uploader_init = function(u, params) {
-  this.uploader_ready = true;
-}
-S3UploadWidget.prototype.on_uploader_error = function(u, error) {
-  console.log(error);
-}
-S3UploadWidget.prototype.on_uploader_queue_changed = function(u) {
-  this.file_field().set_label(this.uploader().files[0].name);
-  this.validate();
-}
-S3UploadWidget.prototype.on_uploader_before_upload = function(u, file) {}
-S3UploadWidget.prototype.on_uploader_upload_file = function(u, file) {}
-S3UploadWidget.prototype.on_uploader_upload_progress = function(u, file) {
-  this.progress_display().set_progress(file);
-}
-S3UploadWidget.prototype.on_uploader_file_uploaded = function(u, file, response) {
-  console.log("on_uploader_file_uploaded");
-  console.log(file);
-  console.log(response);
+S3UploadWidget.prototype.debug_handler = function(message) {
+  console.log(message)
 }
 S3UploadWidget.prototype._on_submit = function(event) {
   return this.on_submit(event);
 }
 S3UploadWidget.prototype.on_submit = function(event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
-  if (this.uploader()) this.uploader().start();
-  this.form().style.display = "none";
+  this.form().style.overflow = "hidden";
+  this.form().style.height = "0";
   this._progress_display = new S3UploadWidget.ProgressDisplay();
   this.element().appendChild(this._progress_display.element());
+  if (this.uploader()) {
+    var file = this.uploader().getFile(0);
+    file.name = "cobblers.png";
+    this.uploader().startUpload(file.id);
+  }
   return false;
 }
 S3UploadWidget.prototype.payload = function() {
   return {
     "AWSAccessKeyId": this.options()["aws_access_key_id"],
-    "bucket": this.options()["bucket"],
     "policy": this.options()["policy"],
-    "signature": this.options()["signature"]
+    "signature": this.options()["signature"],
+    "key": this.options()["key"]
   }
 }
 S3UploadWidget.prototype.progress_display = function() {
   return this._progress_display;
+}
+S3UploadWidget.prototype.thanks = function() {
+  if (!this._thanks) {
+    this._thanks = document.createElement("p");
+    this._thanks.className = "s3_upload_widget_thanks";
+    this._thanks.innerHTML = "Thanks for your submission!"
+  }
+  return this._thanks;
 }
 
 S3UploadWidget.Field = function() {};
@@ -531,5 +536,5 @@ S3UploadWidget.ProgressDisplay.prototype.set_progress = function(new_value) {
   var size = (new_value.size / 1024 / 1024).toFixed(2);
   
   this.bar_inner().style.width = new_value.percent + "%";
-  this.text().innerHTML = loaded + "Mb/" + size + "Mb &mdash; " + new_value.percent + "%";
+  this.text().innerHTML = loaded + "Mb/" + size + "Mb &mdash; " + new_value.percent.toFixed(0) + "%";
 }

@@ -3,7 +3,8 @@ function widget_options(options) {
     "aws_access_key_id": "abc123",
     "bucket": "my-bucket",
     "policy": "123abc",
-    "signature": "zyx987"
+    "signature": "zyx987",
+    "key": "${filename}"
   };
   for (var key in options) result[key] = options[key];
   
