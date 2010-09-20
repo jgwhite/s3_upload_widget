@@ -23,6 +23,12 @@ Function.prototype.bind = function(scope) {
   var __method = this;
   return function() { return __method.apply(scope, arguments) };
 }
+String.prototype.truncate = function(length, truncation) {
+  length = length || 30;
+  truncation = truncation == undefined ? '...' : truncation;
+  return this.length > length ?
+    this.slice(0, length - truncation.length) + truncation : String(this);
+}
 
 S3UploadWidget = function() {};
 S3UploadWidget.instances = [];
@@ -216,20 +222,19 @@ S3UploadWidget.prototype.validate = function() {
 }
 S3UploadWidget.prototype.init_uploader = function() {
   if (window.SWFUpload) {
-    console.log(this.payload());
     this._uploader = new SWFUpload({
       upload_url: this.form().action,
       flash_url: this.options()["swfupload"]["swf"],
       file_post_name: "file",
       post_params: this.payload(),
       use_query_string: false,
-      button_placeholder: this.file_field().input(),
-      button_image_url: "/upload_button_sprite.png",
+      button_placeholder_id: this.file_field().input().id,
+      button_image_url: this.options()["swfupload"]["btn"],
       button_cursor: SWFUpload.CURSOR.HAND,
       button_width: 84,
       button_height: 22,
-      button_text: '',
-      button_text_style: ".button { font-family: Arial; color: #ffffff; }",
+      button_text: "",
+      button_text_style: "",
       button_window_mode: SWFUpload.WINDOW_MODE.TRANSPARENT,
       
       swfupload_loaded_handler: this.swfupload_loaded_handler.bind(this),
@@ -245,6 +250,7 @@ S3UploadWidget.prototype.init_uploader = function() {
       debug_handler: this.debug_handler.bind(this)
     });
   } else {
+    this.file_field().input().style.visibility = "hidden";
     var script = document.createElement("script");
     script.src = this.options()["swfupload"]["src"];
     script.type = "text/javascript";
@@ -268,11 +274,16 @@ S3UploadWidget.prototype.uploader = function() {
 S3UploadWidget.prototype.swfupload_loaded_handler = function() {}
 S3UploadWidget.prototype.file_dialog_start_handler = function() {}
 S3UploadWidget.prototype.file_queued_handler = function(file) {
-  this.file_field().set_label(file.name);
+  this.file_field().set_label(file.name, 22);
+  this.validate();
 }
-S3UploadWidget.prototype.file_queue_error_handler = function() {}
-S3UploadWidget.prototype.file_dialog_complete_handler = function() {}
-S3UploadWidget.prototype.upload_start_handler = function() {
+S3UploadWidget.prototype.file_queue_error_handler = function(file, code, message) {
+  
+}
+S3UploadWidget.prototype.file_dialog_complete_handler = function(file) {
+  
+}
+S3UploadWidget.prototype.upload_start_handler = function(file) {
   
 }
 S3UploadWidget.prototype.upload_progress_handler = function(file, sent, total) {
@@ -293,22 +304,23 @@ S3UploadWidget.prototype.upload_complete_handler = function() {
   
 }
 S3UploadWidget.prototype.debug_handler = function(message) {
-  console.log(message)
+  // console.log(message)
 }
 S3UploadWidget.prototype._on_submit = function(event) {
   return this.on_submit(event);
 }
 S3UploadWidget.prototype.on_submit = function(event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
+  
+  this.form().style.display = "block";
+  this.form().style.position = "relative";
   this.form().style.overflow = "hidden";
-  this.form().style.height = "0";
+  
   this._progress_display = new S3UploadWidget.ProgressDisplay();
   this.element().appendChild(this._progress_display.element());
-  if (this.uploader()) {
-    var file = this.uploader().getFile(0);
-    file.name = "cobblers.png";
-    this.uploader().startUpload(file.id);
-  }
+  
+  if (this.uploader()) this.uploader().startUpload();
+  
   return false;
 }
 S3UploadWidget.prototype.payload = function() {
@@ -410,6 +422,7 @@ S3UploadWidget.Field.prototype.set_type = function(new_type) {
   this.make_input(new_type);
 }
 S3UploadWidget.Field.prototype.set_name = function(new_name) {
+  this.element().className = ["s3_upload_widget_fieldset", "s3_upload_widget_fieldset_" + new_name].join(" ");
   this.input().name = new_name;
 }
 S3UploadWidget.Field.prototype.name = function() {
@@ -423,7 +436,7 @@ S3UploadWidget.Field.prototype.set_value = function(new_value) {
 S3UploadWidget.Field.prototype.value = function() {
   return this.input().value;
 }
-S3UploadWidget.Field.prototype.set_label = function(new_label) {
+S3UploadWidget.Field.prototype.set_label = function(new_label, truncate) {
   if (new_label != undefined && new_label.length > 0) {
     if (!this._label) {
       this._label = document.createElement("label");
@@ -431,6 +444,7 @@ S3UploadWidget.Field.prototype.set_label = function(new_label) {
       this._label.className = "s3_upload_widget_label";
       this.element().appendChild(this._label);
     }
+    if (truncate) new_label = new_label.truncate(truncate);
     this._label.innerHTML = new_label;
   } else {
     if (this._label && this._label.parentNode) this._label.parentNode.removeChild(this._label);
