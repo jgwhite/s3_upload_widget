@@ -344,6 +344,22 @@ describe("S3UploadWidget", function() {
     
   });
   
+  describe("#payload", function() {
+    
+    it("should contain AWSAccessKeyId, key, policy, signature, but nothing more", function() {
+      var options = widget_with_extra_field_options()
+      var widget = S3UploadWidget.create(options);
+      var payload = widget.payload();
+      expect(payload).toBeDefined();
+      expect(payload["AWSAccessKeyId"]).toEqual(options["aws_access_key_id"]);
+      expect(payload["key"]).toEqual(options["key"]);
+      expect(payload["policy"]).toEqual(options["policy"]);
+      expect(payload["signature"]).toEqual(options["signature"]);
+      expect(payload["terms_agreed"]).not.toBeDefined();
+    });
+    
+  });
+  
   describe("Field", function() {
     
     var field;
@@ -685,6 +701,39 @@ describe("S3UploadWidget", function() {
     
   });
   
+  describe("ProgressDisplay", function() {
+    
+    var progress_display;
+    
+    beforeEach(function() {
+      progress_display = new S3UploadWidget.ProgressDisplay();
+    });
+    
+    it("should have the structure described below", function() {
+      expect(progress_display.element().className).toEqual("s3_upload_widget_progress_display");
+      expect(progress_display.element().childNodes[0].className).toEqual("s3_upload_widget_progress_bar_outer");
+      expect(progress_display.element().childNodes[0].childNodes[0].className).toEqual("s3_upload_widget_progress_bar_inner");
+      expect(progress_display.element().childNodes[1].className).toEqual("s3_upload_widget_progress_text");
+    });
+    
+    describe("#set_progress", function() {
+      
+      it("should set the width of bar inner and update text", function() {
+        expect(progress_display.element().className).toEqual("s3_upload_widget_progress_display");
+        progress_display.set_progress({
+          loaded: 262144,
+          size: 1048576,
+          percent: 25
+        });
+        expect(progress_display.bar_inner()).toBeDefined();
+        expect(progress_display.bar_inner().style.width).toEqual("25%");
+        expect(progress_display.text().innerHTML).toEqual("0.25Mb/1.00Mb — 25%");
+      });
+      
+    });
+    
+  });
+  
   describe("Complete structure", function() {
     var options;
     var widget;
@@ -820,25 +869,119 @@ describe("S3UploadWidget", function() {
   });
   
   describe("Plupload integration", function() {
+    var widget;
+    var options;
     
-    it("should require plupload from given source and init", function() {
-      var widget;
-      
+    beforeEach(function() {
       runs(function() {
-        if (window.plupload) delete window.plupload;
-        expect(window.plupload).not.toBeDefined();
-        widget = S3UploadWidget.create(widget_options_with_plupload());
+        options = widget_options_with_plupload();
+        widget = S3UploadWidget.create(options);
       });
       
       waitsFor(function() { return window.plupload != null }, "Plupload to load", 500);
       waitsFor(function() { return widget.uploader() != null }, "widget to init Plupload", 500);
       waitsFor(function() { return widget.uploader_ready === true }, "Plupload runtime to init", 500);
-      
+    });
+    
+    it("should react to QueueChanged by setting the file field label", function() {
       runs(function() {
-        var file = new plupload.File("myfile123", "myfilm.zip", 1024);
-        widget.uploader().trigger("FilesAdded", [file]);
+        var file = new plupload.File("myfile123", "myfile.zip", 1024);
+        widget.uploader().files = [];
+        widget.uploader().files.push(file);
+        widget.uploader().trigger("QueueChanged");
         expect(widget.fields()[0].label()).toEqual(file.name);
       });
+    });
+    
+    it("should allow validation based on the upload queue", function() {
+      runs(function() {
+        expect(widget.validate()).toBeFalsy();
+        expect(widget.errors[0]).toEqual(widget.file_field());
+        expect(widget.file_field().errors[0]).toEqual("you need to choose a file");
+        expect(widget.submit_button().disabled()).toBeTruthy();
+        
+        var file = new plupload.File("myfile123", "myfile.zip", 1024);
+        widget.uploader().files.push(file);
+        widget.uploader().trigger("QueueChanged");
+        expect(widget.submit_button().disabled()).toBeFalsy();
+        expect(widget.validate()).toBeTruthy();
+      });
+    });
+    
+    it("should set payload as multipart_params", function() {
+      runs(function() {
+        expect(widget.uploader().settings.multipart_params).toEqual(widget.payload());
+      });
+    });
+    
+    it("should trigger start on submit", function() {
+      runs(function() {
+        var file = new plupload.File("myfile123", "myfile.zip", 1024);
+        widget.uploader().files.push(file);
+        widget.uploader().trigger("QueueChanged");
+        spyOn(widget.uploader(), "start");
+        widget.submit_button().input().click();
+        expect(widget.uploader().start).toHaveBeenCalled();
+      });
+    });
+    
+    describe("upload progress", function() {
+      var file;
+      
+      beforeEach(function() {
+        runs(function() {
+          file = new plupload.File("myfile123", "myfile.zip", 1048576);
+          widget.uploader().files.push(file);
+          widget.uploader().trigger("QueueChanged");
+          spyOn(widget.uploader(), "start");
+          widget.submit_button().input().click();
+        });
+      });
+      
+      it("should replace inputs with progress bar on submit", function() {
+        runs(function() {
+          expect(widget.form().style.display).toEqual("none");
+          expect(widget.progress_display()).toBeDefined();
+          expect(widget.progress_display().element().parentNode).toEqual(widget.element());
+        });
+      });
+      
+      it("should update progress on upload progress events", function() {
+        runs(function() {
+          spyOn(widget.progress_display(), "set_progress").andCallThrough();
+          file.loaded = file.size * 0.1;
+          file.percent = 10;
+          widget.uploader().trigger("UploadProgress", file);
+          expect(widget.progress_display().set_progress).toHaveBeenCalledWith(file);
+          file.loaded = file.size * 0.2;
+          file.percent = 20;
+          widget.uploader().trigger("UploadProgress", file);
+          expect(widget.progress_display().set_progress).toHaveBeenCalledWith(file);
+          expect(widget.progress_display().bar_inner().style.width).toEqual("20%");
+        });
+      });
+      
+    });
+    
+  });
+  
+  describe("Submit events", function() {
+    var widget;
+    
+    beforeEach(function() {
+      widget = S3UploadWidget.create(widget_options({ "target": "my_target" }));
+    });
+    afterEach(function() {
+      widget.remove();
+      delete widget;
+    });
+    
+    it("should capture form#onsubmit", function() {
+      spyOn(widget, "on_submit").andCallThrough();
+      expect(widget.validate()).toBeTruthy();
+      expect(widget.submit_button().disabled()).toBeFalsy();
+      widget.submit_button().input().click();
+      expect(widget.on_submit).toHaveBeenCalled();
     });
     
   });

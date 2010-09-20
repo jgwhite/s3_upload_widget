@@ -10,6 +10,21 @@ function widget_options(options) {
   return result;
 }
 
+function widget_with_extra_field_options(options) {
+  return widget_options({
+    "fields": [
+      {
+        "type": "checkbox",
+        "name": "terms_agreed",
+        "value": "1",
+        "label": "I agree to the Terms &amp; Conditions",
+        "checked": false,
+        "valid_if": { "checked": true }
+      }
+    ]
+  });
+}
+
 function widget_options_with_plupload(options) {
   return widget_options({
     "target": "my_target",
