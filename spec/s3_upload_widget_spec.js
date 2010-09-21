@@ -11,9 +11,8 @@ describe("S3UploadWidget", function() {
   afterEach(function () {
     document.body.removeChild(my_target);
     delete my_target;
-    // for (var i = S3UploadWidget.instances.length - 1; i >= 0; i--) {
-    //   S3UploadWidget.instances[i].remove();
-    // }
+    for (var i = S3UploadWidget.instances.length - 1; i >= 0; i--)
+      S3UploadWidget.instances[i].remove();
   });
   
   describe("#initialize", function() {
@@ -351,10 +350,10 @@ describe("S3UploadWidget", function() {
       var widget = S3UploadWidget.create(options);
       var payload = widget.payload();
       expect(payload).toBeDefined();
-      expect(payload["AWSAccessKeyId"]).toEqual(options["aws_access_key_id"]);
-      expect(payload["key"]).toEqual(options["key"]);
-      expect(payload["policy"]).toEqual(options["policy"]);
-      expect(payload["signature"]).toEqual(options["signature"]);
+      expect(payload["AWSAccessKeyId"]).toEqual(widget.hidden_inputs()["AWSAccessKeyId"].value);
+      expect(payload["key"]).toEqual(widget.hidden_inputs()["key"].value);
+      expect(payload["policy"]).toEqual(widget.hidden_inputs()["policy"].value);
+      expect(payload["signature"]).toEqual(widget.hidden_inputs()["signature"].value);
       expect(payload["terms_agreed"]).not.toBeDefined();
     });
     
@@ -799,7 +798,6 @@ describe("S3UploadWidget", function() {
     it("should contain a hidden input for key", function() {
       var input = $("input[name='key']", widget.form())[0];
       expect(input).toBeDefined();
-      expect(input.value).toEqual(S3UploadWidget.DEFAULTS["key"]);
     });
     
     it("should, first, contain a field for my file", function() {
@@ -909,7 +907,9 @@ describe("S3UploadWidget", function() {
       runs(function() {
         widget = S3UploadWidget.create(widget_options_with_swfupload());
       });
-      waitsFor(function() { return window.SWFUpload != undefined && widget.uploader_ready === true });
+      waitsFor(function() {
+        return window.SWFUpload != undefined && widget.uploader_ready === true
+      }, "SWFUpload to do its thing", 1000);
     });
     afterEach(function() {
       runs(function() {

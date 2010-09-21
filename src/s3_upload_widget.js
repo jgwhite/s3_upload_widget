@@ -44,6 +44,8 @@ S3UploadWidget.create = function(options) {
   return instance;
 }
 S3UploadWidget.prototype.initialize = function(options) {
+  S3UploadWidget.lookup_user_ip();
+  
   //--- copy in options
   this._options = {};
   for (var key in S3UploadWidget.DEFAULTS)
@@ -72,8 +74,11 @@ S3UploadWidget.prototype.initialize = function(options) {
     "AWSAccessKeyId": this.options()["aws_access_key_id"],
     "policy": this.options()["policy"],
     "signature": this.options()["signature"],
-    "key": this.options()["key"]
+    "Filename": ""
   });
+  
+  //--- sets the dynamic key
+  this.set_key();
   
   //--- add the file field (you don't get a choice about that)
   this._file_field = this.add_field({
@@ -96,7 +101,6 @@ S3UploadWidget.prototype.initialize = function(options) {
   
   //--- capture submit events
   this.form().onsubmit = this._on_submit.bind(this);
-  // this.submit_button().input().onclick = this._on_submit.bind(this);
   
   //--- if a target is specified, append the element
   if (this.options()["target"]) this.insert(this.options()["target"]);
@@ -204,6 +208,7 @@ S3UploadWidget.prototype.on_field_change = function(field) {
   } else {
     this._submit_button.set_disabled(true);
   }
+  if (this.uploader()) this.uploader().setPostParams(this.payload());
 }
 S3UploadWidget.prototype.validate = function() {
   this.errors = [];
@@ -324,6 +329,8 @@ S3UploadWidget.prototype.on_submit = function(event) {
   
   if (event) { event.preventDefault(); event.stopPropagation(); }
   
+  if (this.uploader()) this.uploader().setPostParams(this.payload());
+  
   this.hide_form();
   
   if (this.uploader()) this.uploader().startUpload();
@@ -332,10 +339,10 @@ S3UploadWidget.prototype.on_submit = function(event) {
 }
 S3UploadWidget.prototype.payload = function() {
   return {
-    "AWSAccessKeyId": this.options()["aws_access_key_id"],
-    "policy": this.options()["policy"],
-    "signature": this.options()["signature"],
-    "key": this.options()["key"]
+    "AWSAccessKeyId": this.hidden_inputs()["AWSAccessKeyId"].value,
+    "policy": this.hidden_inputs()["policy"].value,
+    "signature": this.hidden_inputs()["signature"].value,
+    "key": this.hidden_inputs()["key"].value
   }
 }
 S3UploadWidget.prototype.progress_display = function() {
@@ -375,6 +382,30 @@ S3UploadWidget.prototype.hide_notice = function() {
 }
 S3UploadWidget.prototype.show_notice = function() {
   this.notice().style.display = "block";
+}
+S3UploadWidget.prototype.on_user_ip_available = function() {
+  this.set_key();
+}
+S3UploadWidget.prototype.check_if_user_ip_available = function() {
+  if (S3UploadWidget.user_ip) this.on_user_ip_available();
+}
+S3UploadWidget.prototype.set_key = function() {
+  var key = [];
+  
+  var date = new Date();
+  key.push(date.getFullYear());
+  key.push(date.getMonth() + 1);
+  key.push(date.getDate());
+  
+  key.push(S3UploadWidget.user_ip);
+  
+  key.push("${filename}");
+  
+  key = key.join("/");
+  
+  this.set_hidden_value("key", key);
+  
+  if (this.uploader()) this.uploader().setPostParams(this.payload());
 }
 
 S3UploadWidget.Field = function() {};
@@ -592,3 +623,27 @@ S3UploadWidget.ProgressDisplay.prototype.hide = function() {
 S3UploadWidget.ProgressDisplay.prototype.show = function() {
   this.element().style.display = "block";
 }
+
+S3UploadWidget.user_ip = "unknown";
+S3UploadWidget.lookup_user_ip = function() {
+  if (S3UploadWidget.user_ip != undefined && S3UploadWidget.user_ip != "unknown") return;
+  
+  if (!document.body && S3UploadWidget.lookup_timeout == undefined) {
+    S3UploadWidget.lookup_timeout = setTimeout(S3UploadWidget.lookup_user_ip, 100);
+    return;
+  }
+  
+  S3UploadWidget.lookup_timeout = null;
+  
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src = "http://jsonip.appspot.com/?callback=S3UploadWidget.set_user_ip";
+  document.body.appendChild(script);
+}
+S3UploadWidget.set_user_ip = function(details) {
+  S3UploadWidget.user_ip = details["ip"];
+  
+  for (var i = 0; i < S3UploadWidget.instances.length; i++)
+    S3UploadWidget.instances[i].on_user_ip_available();
+}
+S3UploadWidget.lookup_user_ip();
