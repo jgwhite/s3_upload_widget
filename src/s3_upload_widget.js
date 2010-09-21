@@ -223,7 +223,7 @@ S3UploadWidget.prototype.validate = function() {
     if (!this.fields()[i].valid()) this.errors.push(this.fields()[i]);
   }
   
-  if ( (this.uploader() && this.uploader().getFile(0) == null)
+  if ( (this.uploader() && this.uploader().getFile() == null)
     || (!this.uploader() && (this.file_field().value() == null || this.file_field().value() == ""))
   ) {
     this.file_field().errors = [];
@@ -298,7 +298,7 @@ S3UploadWidget.prototype.file_dialog_complete_handler = function(file) {
   
 }
 S3UploadWidget.prototype.upload_start_handler = function(file) {
-  
+  this.progress_display().show();
 }
 S3UploadWidget.prototype.upload_progress_handler = function(file, sent, total) {
   this.progress_display().set_progress({
@@ -306,6 +306,7 @@ S3UploadWidget.prototype.upload_progress_handler = function(file, sent, total) {
     size: total,
     percent: (sent / total) * 100
   });
+  this.progress_display().show();
 }
 S3UploadWidget.prototype.upload_error_handler = function(file, code, messages) {
   switch (code) {
@@ -319,7 +320,7 @@ S3UploadWidget.prototype.upload_error_handler = function(file, code, messages) {
 }
 S3UploadWidget.prototype.upload_success_handler = function() {
   this.progress_display().element().style.display = "none";
-  this.element().appendChild(this.thanks());
+  this.show_thanks();
 }
 S3UploadWidget.prototype.upload_complete_handler = function() {
   
@@ -369,6 +370,7 @@ S3UploadWidget.prototype.thanks = function() {
     reset_link.innerHTML = "Click here to submit something else";
     reset_link.onclick = this.reset.bind(this);
     this._thanks.appendChild(reset_link);
+    this.element().appendChild(this._thanks);
   }
   return this._thanks;
 }
@@ -420,10 +422,19 @@ S3UploadWidget.prototype.set_key = function() {
   
   if (this.uploader()) this.uploader().setPostParams(this.payload());
 }
-S3UploadWidget.prototype.reset = function() {
+S3UploadWidget.prototype.show_thanks = function() {
+  this.thanks().style.display = "block";
+}
+S3UploadWidget.prototype.hide_thanks = function() {
   this.thanks().style.display = "none";
+}
+S3UploadWidget.prototype.reset = function() {
+  this.hide_thanks();
+  this.hide_notice();
+  this.progress_display().hide();
   this.file_field().set_label("");
   this.show_form();
+  this.on_field_change();
   return false;
 }
 
