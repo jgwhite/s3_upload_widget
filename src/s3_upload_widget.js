@@ -362,15 +362,22 @@ S3UploadWidget.prototype.thanks = function() {
   if (!this._thanks) {
     this._thanks = document.createElement("p");
     this._thanks.className = "s3_upload_widget_thanks";
-    this._thanks.innerHTML = "Thanks for your submission!"
+    this._thanks.innerHTML = "Thanks for your submission!<br />";
+    var reset_link = document.createElement("a");
+    reset_link.href = "#reset";
+    reset_link.className = "s3_upload_widget_reset_link";
+    reset_link.innerHTML = "Click here to submit something else";
+    reset_link.onclick = this.reset.bind(this);
+    this._thanks.appendChild(reset_link);
   }
   return this._thanks;
 }
 S3UploadWidget.prototype.hide_form = function() {
+  this._prev_form_height = this.form().style.height;
   this.form().style.height = "0px";
 }
 S3UploadWidget.prototype.show_form = function() {
-  this.form().style.height = "auto";
+  this.form().style.height = this._prev_form_height;
 }
 S3UploadWidget.prototype.notice = function() {
   if (!this._notice) {
@@ -412,6 +419,12 @@ S3UploadWidget.prototype.set_key = function() {
   this.set_hidden_value("key", key);
   
   if (this.uploader()) this.uploader().setPostParams(this.payload());
+}
+S3UploadWidget.prototype.reset = function() {
+  this.thanks().style.display = "none";
+  this.file_field().set_label("");
+  this.show_form();
+  return false;
 }
 
 S3UploadWidget.Field = function() {};
