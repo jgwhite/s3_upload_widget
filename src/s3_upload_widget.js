@@ -142,8 +142,9 @@ S3UploadWidget.prototype.insert = function(target) {
 }
 S3UploadWidget.prototype.remove = function() {
   this.unregister();
+  if (this.uploader()) this.uploader().destroy();
   this.remove_elements();
-  this.dealloc();
+  this.release();
 }
 S3UploadWidget.prototype.remove_elements = function() {
   if (this._element && this._element.parentNode)
@@ -152,7 +153,7 @@ S3UploadWidget.prototype.remove_elements = function() {
 S3UploadWidget.prototype.unregister = function () {
   var indexOf_this = S3UploadWidget.instances.remove(this);
 }
-S3UploadWidget.prototype.dealloc = function() {
+S3UploadWidget.prototype.release = function() {
   for (var prop in this) if (prop.indexOf("_") === 0) delete this[prop];
 }
 S3UploadWidget.prototype.fields = function() {
@@ -271,7 +272,9 @@ S3UploadWidget.prototype.on_uploader_ready = function() {
 S3UploadWidget.prototype.uploader = function() {
   return this._uploader;
 }
-S3UploadWidget.prototype.swfupload_loaded_handler = function() {}
+S3UploadWidget.prototype.swfupload_loaded_handler = function() {
+  this.uploader_ready = true;
+}
 S3UploadWidget.prototype.file_dialog_start_handler = function() {}
 S3UploadWidget.prototype.file_queued_handler = function(file) {
   this.file_field().set_label(file.name, 22); // 22 is how much to truncate it by
@@ -294,7 +297,14 @@ S3UploadWidget.prototype.upload_progress_handler = function(file, sent, total) {
   });
 }
 S3UploadWidget.prototype.upload_error_handler = function(file, code, messages) {
-  // TODO: handle upload error
+  switch (code) {
+  case SWFUpload.UPLOAD_ERROR.HTTP_ERROR:
+    this.hide_form();
+    this.progress_display().hide();
+    this.set_notice("Uh oh, we&rsquo;ve got a problem, please try again later.")
+    this.show_notice();
+    break;
+  }
 }
 S3UploadWidget.prototype.upload_success_handler = function() {
   this.progress_display().element().style.display = "none";
@@ -310,12 +320,11 @@ S3UploadWidget.prototype._on_submit = function(event) {
   return this.on_submit(event);
 }
 S3UploadWidget.prototype.on_submit = function(event) {
+  if (!this.uploader()) return true;
+  
   if (event) { event.preventDefault(); event.stopPropagation(); }
   
-  this.form().style.height = "0px";
-  
-  this._progress_display = new S3UploadWidget.ProgressDisplay();
-  this.element().appendChild(this._progress_display.element());
+  this.hide_form();
   
   if (this.uploader()) this.uploader().startUpload();
   
@@ -330,6 +339,10 @@ S3UploadWidget.prototype.payload = function() {
   }
 }
 S3UploadWidget.prototype.progress_display = function() {
+  if (!this._progress_display) {
+    this._progress_display = new S3UploadWidget.ProgressDisplay();
+    this.element().appendChild(this._progress_display.element());
+  }
   return this._progress_display;
 }
 S3UploadWidget.prototype.thanks = function() {
@@ -339,6 +352,29 @@ S3UploadWidget.prototype.thanks = function() {
     this._thanks.innerHTML = "Thanks for your submission!"
   }
   return this._thanks;
+}
+S3UploadWidget.prototype.hide_form = function() {
+  this.form().style.height = "0px";
+}
+S3UploadWidget.prototype.show_form = function() {
+  this.form().style.height = "auto";
+}
+S3UploadWidget.prototype.notice = function() {
+  if (!this._notice) {
+    this._notice = document.createElement("div");
+    this._notice.className = "s3_upload_widget_notice";
+    this.element().appendChild(this._notice);
+  }
+  return this._notice;
+}
+S3UploadWidget.prototype.set_notice = function(text) {
+  this.notice().innerHTML = text;
+}
+S3UploadWidget.prototype.hide_notice = function() {
+  this.notice().style.display = "none";
+}
+S3UploadWidget.prototype.show_notice = function() {
+  this.notice().style.display = "block";
 }
 
 S3UploadWidget.Field = function() {};
@@ -549,4 +585,10 @@ S3UploadWidget.ProgressDisplay.prototype.set_progress = function(new_value) {
   
   this.bar_inner().style.width = new_value.percent + "%";
   this.text().innerHTML = loaded + "Mb/" + size + "Mb &mdash; " + new_value.percent.toFixed(0) + "%";
+}
+S3UploadWidget.ProgressDisplay.prototype.hide = function() {
+  this.element().style.display = "none";
+}
+S3UploadWidget.ProgressDisplay.prototype.show = function() {
+  this.element().style.display = "block";
 }

@@ -84,14 +84,14 @@ describe("S3UploadWidget", function() {
     
   });
   
-  describe("#dealloc", function() {
+  describe("#release", function() {
     
     it("should delete all instance variables", function() {
       var widget = S3UploadWidget.create(widget_options());
       widget.element();
       expect(widget._options).toBeDefined();
       expect(widget._element).toBeDefined();
-      widget.dealloc();
+      widget.release();
       expect(widget._options).not.toBeDefined();
       expect(widget._element).not.toBeDefined();
     });
@@ -123,7 +123,7 @@ describe("S3UploadWidget", function() {
   
   describe("#remove", function() {
     
-    it("should remove all generated elements and dealloc", function() {
+    it("should remove all generated elements and release", function() {
       var widget = S3UploadWidget.create(widget_options({ "target": "my_target" }));
       widget.remove();
     });
@@ -895,8 +895,41 @@ describe("S3UploadWidget", function() {
       spyOn(widget, "on_submit").andCallThrough();
       spyOn(widget, "validate").andReturn(true);
       widget.on_field_change();
-      widget.submit_button().input().click();
+      expect(widget.validate).toHaveBeenCalled();
+      widget.form().onsubmit();
       expect(widget.on_submit).toHaveBeenCalled();
+    });
+    
+  });
+  
+  describe("SWFUpload integration", function() {
+    var widget;
+    
+    beforeEach(function() {
+      runs(function() {
+        widget = S3UploadWidget.create(widget_options_with_swfupload());
+      });
+      waitsFor(function() { return window.SWFUpload != undefined && widget.uploader_ready === true });
+    });
+    afterEach(function() {
+      runs(function() {
+        widget.remove();
+        delete widget;
+      });
+    });
+    
+    describe("Upload failure", function() {
+      
+      it("should display a permanent error message an http error (assumed to be an auth error)", function() {
+        runs(function() {
+          widget.upload_error_handler({}, SWFUpload.UPLOAD_ERROR.HTTP_ERROR, "");
+          expect(widget.form().style.height).toEqual("0px");
+          expect(widget.progress_display().element().style.display).toEqual("none");
+          var notice = $(widget.element()).children(".s3_upload_widget_notice");
+          expect(notice.length).toEqual(1);
+        });
+      });
+      
     });
     
   });

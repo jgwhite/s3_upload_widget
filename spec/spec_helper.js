@@ -26,9 +26,13 @@ function widget_with_extra_field_options(options) {
   });
 }
 
-function widget_options_with_plupload(options) {
+function widget_options_with_swfupload(options) {
   return widget_options({
     "target": "my_target",
-    "plupload_src": "lib/plupload-1.2.4/plupload.full.min.js"
+    "swfupload": {
+      "src": "/lib/swfupload-2.2.0.1/swfupload.js",
+      "swf": "/lib/swfupload-2.2.0.1/swfupload.swf",
+      "btn": "/choose_button_sprite.png"
+    }
   });
 }
