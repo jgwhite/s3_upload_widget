@@ -29,6 +29,12 @@ String.prototype.truncate = function(length, truncation) {
   return this.length > length ?
     this.slice(0, length - truncation.length) + truncation : String(this);
 }
+Number.prototype.toPaddedString = function(length, radix) {
+  var string = this.toString(radix || 10);
+  length = length || 2;
+  for (var i = 0; i < (length - string.length); i++) string = "0" + string;
+  return string;
+}
 
 S3UploadWidget = function() {};
 S3UploadWidget.instances = [];
@@ -394,8 +400,8 @@ S3UploadWidget.prototype.set_key = function() {
   
   var date = new Date();
   key.push(date.getFullYear());
-  key.push(date.getMonth() + 1);
-  key.push(date.getDate());
+  key.push((date.getMonth() + 1).toPaddedString(2));
+  key.push(date.getDate().toPaddedString(2));
   
   key.push(S3UploadWidget.user_ip);
   
