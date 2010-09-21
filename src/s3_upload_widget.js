@@ -198,7 +198,11 @@ S3UploadWidget.prototype._on_field_change = function(field) {
   if (this.on_field_change) this.on_field_change(field);
 }
 S3UploadWidget.prototype.on_field_change = function(field) {
-  this.validate();
+  if (this.validate()) {
+    this._submit_button.set_disabled(false);
+  } else {
+    this._submit_button.set_disabled(true);
+  }
 }
 S3UploadWidget.prototype.validate = function() {
   this.errors = [];
@@ -207,16 +211,12 @@ S3UploadWidget.prototype.validate = function() {
     if (!this.fields()[i].valid()) this.errors.push(this.fields()[i]);
   }
   
-  if (this.options()["swfupload"] && this.uploader() && this.uploader().getFile(0) == undefined) {
+  if ( (this.uploader() && this.uploader().getFile(0) == null)
+    || (!this.uploader() && (this.file_field().value() == null || this.file_field().value() == ""))
+  ) {
     this.file_field().errors = [];
     this.file_field().errors.push("you need to choose a file");
     this.errors.push(this.file_field());
-  }
-  
-  if (this.errors.length > 0) {
-    this._submit_button.set_disabled(true);
-  } else {
-    this._submit_button.set_disabled(false);
   }
   
   return this.errors.length === 0;
@@ -251,7 +251,6 @@ S3UploadWidget.prototype.init_uploader = function() {
       debug_handler: this.debug_handler.bind(this)
     });
   } else {
-    this.file_field().input().style.visibility = "hidden";
     var script = document.createElement("script");
     script.src = this.options()["swfupload"]["src"];
     script.type = "text/javascript";
@@ -275,8 +274,8 @@ S3UploadWidget.prototype.uploader = function() {
 S3UploadWidget.prototype.swfupload_loaded_handler = function() {}
 S3UploadWidget.prototype.file_dialog_start_handler = function() {}
 S3UploadWidget.prototype.file_queued_handler = function(file) {
-  this.file_field().set_label(file.name, 22);
-  this.validate();
+  this.file_field().set_label(file.name, 22); // 22 is how much to truncate it by
+  this.on_field_change();
 }
 S3UploadWidget.prototype.file_queue_error_handler = function(file, code, message) {
   
@@ -313,9 +312,6 @@ S3UploadWidget.prototype._on_submit = function(event) {
 S3UploadWidget.prototype.on_submit = function(event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
   
-  // this.form().style.display = "block";
-  // this.form().style.position = "relative";
-  // this.form().style.overflow = "hidden";
   this.form().style.height = "0px";
   
   this._progress_display = new S3UploadWidget.ProgressDisplay();

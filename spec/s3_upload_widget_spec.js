@@ -859,11 +859,23 @@ describe("S3UploadWidget", function() {
     });
     
     it("should enable the submit once a file chosen and terms agreed", function() {
+      expect(widget.validate()).toBeFalsy();
       expect(widget.submit_button().disabled()).toBeTruthy();
-      widget.fields()[0].set_value("myfile.zip");
+      
+      widget.file_field().value = function () { return "myfile.zip" }
+      expect(widget.validate()).toBeFalsy();
       expect(widget.submit_button().disabled()).toBeTruthy();
+      
       widget.fields()[1].set_checked(true);
+      expect(widget.validate()).toBeTruthy();
       expect(widget.submit_button().disabled()).toBeFalsy();
+      
+      widget.file_field().value = function () { return "" }
+      expect(widget.uploader()).not.toBeDefined();
+      expect(widget.file_field().value()).toEqual("");
+      widget.on_field_change();
+      expect(widget.validate()).toBeFalsy();
+      expect(widget.submit_button().disabled()).toBeTruthy();
     });
     
   });
@@ -881,8 +893,8 @@ describe("S3UploadWidget", function() {
     
     it("should capture form#onsubmit", function() {
       spyOn(widget, "on_submit").andCallThrough();
-      expect(widget.validate()).toBeTruthy();
-      expect(widget.submit_button().disabled()).toBeFalsy();
+      spyOn(widget, "validate").andReturn(true);
+      widget.on_field_change();
       widget.submit_button().input().click();
       expect(widget.on_submit).toHaveBeenCalled();
     });
